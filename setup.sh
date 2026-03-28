@@ -28,7 +28,7 @@ echo "Node $(node --version) active."
 echo ""
 echo "[2/4] Installing frontend dependencies..."
 cd frontend
-npm install
+npm ci
 cd ..
 echo "Frontend ready."
 
@@ -36,7 +36,7 @@ echo "Frontend ready."
 echo ""
 echo "[3/4] Installing Cloud Functions dependencies..."
 cd functions
-npm install
+npm ci
 cd ..
 echo "Functions ready."
 
