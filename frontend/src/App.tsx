@@ -1,9 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store/useAuthStore'
-
-// Pages — Shafi owns Map + Landing, Sumaiya owns Auth + Profile
+import MapPage from './pages/MapPage'   // Shafi
 // import LandingPage from './pages/LandingPage'   // Shafi
-// import MapPage from './pages/MapPage'             // Shafi
 // import AuthPage from './pages/AuthPage'           // Sumaiya
 // import ProfilePage from './pages/ProfilePage'     // Sumaiya
 
@@ -13,7 +11,8 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<div>BuzzOnCampus — Coming Soon</div>} />
+        <Route path="/map" element={<MapPage />} />
+        <Route path="/" element={<Navigate to="/map" />} />
         {/* Uncomment as pages are built:
         <Route path="/" element={<LandingPage />} />
         <Route path="/map" element={user ? <MapPage /> : <Navigate to="/auth" />} />
