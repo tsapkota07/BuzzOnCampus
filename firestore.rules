@@ -1,0 +1,50 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users — read own doc, write only via Cloud Functions
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false; // Cloud Functions only
+    }
+
+    // Pins — anyone authenticated at same university can read
+    // Create allowed from client; update/delete via Cloud Functions
+    match /pins/{pinId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.user_id == request.auth.uid
+        && request.resource.data.status == 'active';
+      allow update, delete: if false; // Cloud Functions only
+    }
+
+    // Participations — read own, create own
+    match /participations/{participationId} {
+      allow read: if request.auth != null
+        && resource.data.user_id == request.auth.uid;
+      allow create: if request.auth != null
+        && request.resource.data.user_id == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Transactions — read own only
+    match /transactions/{transactionId} {
+      allow read: if request.auth != null
+        && (resource.data.from_user_id == request.auth.uid
+          || resource.data.to_user_id == request.auth.uid);
+      allow write: if false; // Cloud Functions only
+    }
+
+    // Universities — public read, no write from client
+    match /universities/{universityId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Businesses — public read, no write from client
+    match /businesses/{businessId} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}
