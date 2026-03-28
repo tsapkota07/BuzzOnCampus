@@ -21,14 +21,14 @@ Update these as you build. Claude reads this to know what exists.
 - [x] `src/store/useAuthStore.ts` — scaffolded
 - [x] `src/store/useMapStore.ts` — scaffolded with Pin type, all actions
 - [x] `src/store/useBuzzStore.ts` — scaffolded
-- [ ] `src/components/map/MapView.tsx`
-- [ ] `src/components/map/AvatarMarker.tsx`
+- [x] `src/components/map/MapView.tsx`
+- [x] `src/components/map/AvatarMarker.tsx`
 - [ ] `src/components/map/PinMarker.tsx`
 - [ ] `src/components/map/PinDetailSidebar.tsx`
 - [ ] `src/components/map/FilterButtons.tsx`
 - [ ] `src/components/ui/Navbar.tsx`
 - [ ] `src/pages/LandingPage.tsx`
-- [ ] `src/pages/MapPage.tsx`
+- [x] `src/pages/MapPage.tsx`
 
 ## Getting Started
 ```bash
