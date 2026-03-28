@@ -2,7 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store/useAuthStore'
 import MapPage from './pages/MapPage'   // Shafi
 import LandingPage from './pages/LandingPage'   // Shafi
-// import AuthPage from './pages/AuthPage'           // Sumaiya
+import AuthPage from './pages/AuthPage'
+import NotFoundPage from './pages/NotFoundPage'
 // import ProfilePage from './pages/ProfilePage'     // Sumaiya
 
 function App() {
@@ -12,12 +13,10 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/map" element={<MapPage />} />
-        {/* Uncomment as pages are built:
-        <Route path="/map" element={user ? <MapPage /> : <Navigate to="/auth" />} />
-        <Route path="/auth" element={!user ? <AuthPage /> : <Navigate to="/map" />} />
-        <Route path="/profile" element={user ? <ProfilePage /> : <Navigate to="/auth" />} />
-        */}
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/map" element={user ? <MapPage /> : <Navigate to="/" replace />} />
+        {/* <Route path="/profile" element={user ? <ProfilePage /> : <Navigate to="/auth" />} /> */}
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
   )

@@ -1,6 +1,6 @@
 # BuzzOnCampus — Root CLAUDE.md
 # Read by everyone. Updated as the project evolves.
-# Last updated: project scaffold complete, no feature code written yet.
+# Last updated: auth built (SignupForm, LoginForm, AuthPage), LandingPage built, 404 page built.
 
 ## Project
 BuzzOnCampus — live 3D campus map platform built at Kent State Hackathon, March 28–29 (18–20 hrs).
@@ -29,11 +29,17 @@ Update these checkboxes as things get built. This is how Claude knows what exist
 - [ ] `frontend/.env` created with Mapbox token (Firebase config already hardcoded in `firebase.ts`)
 
 ### Auth
-- [ ] `SignupForm.tsx` built
-- [ ] `LoginForm.tsx` built
-- [ ] `AuthContext.tsx` built and wrapping App
-- [ ] `.edu` email validation working (via `validateEduEmail` Cloud Function)
-- [ ] 20 Buzz Points awarded on signup (via `onUserCreated` Cloud Function)
+- [x] `SignupForm.tsx` built — sends OTP via `sendOtp` Cloud Function before account creation
+- [x] `LoginForm.tsx` built — Firebase sign-in + load user doc
+- [x] `AuthPage.tsx` built — hosts SignupForm, LoginForm, OtpScreen, university-themed, at `/auth`
+- [x] `OtpScreen.tsx` built — 6-digit input, 10-min countdown, max 3 attempts, resend button
+- [x] Client-side `.edu` email validation (exact + subdomain match, e.g. student.ysu.edu)
+- [x] `sendOtp` Cloud Function written — emails OTP via Resend from noreply@mail.tirsansapkota.com
+- [x] `verifyOtp` Cloud Function written — validates code, expiry, attempts
+- [x] `mail.tirsansapkota.com` verified in Resend via Cloudflare
+- [ ] All Cloud Functions deployed — BLOCKED: need Firebase Blaze plan upgrade
+- [ ] OTP flow tested end-to-end
+- [ ] 20 Buzz Points awarded on signup (via `onUserCreated` — needs deploy)
 
 ### Map & Pins
 - [x] `MapView.tsx` built with Mapbox — 3D toggle working, `onMapClick` prop exposed
@@ -53,8 +59,9 @@ Update these checkboxes as things get built. This is how Claude knows what exist
 ### Feed & Polish
 - [ ] `PinFeed.tsx` built (campus activity feed)
 - [ ] `UserProfile.tsx` built
-- [ ] `LandingPage.tsx` built
-- [ ] Buzz balance counter animating in Navbar
+- [x] `LandingPage.tsx` built — university selector, photo slideshow, navigates to `/auth`
+- [x] `NotFoundPage.tsx` built — custom 404 with Go Back / Back to Home
+- [ ] `Navbar.tsx` built with Buzz balance counter
 
 ### Deployment
 - [ ] Cloud Functions deployed (`firebase deploy --only functions`)

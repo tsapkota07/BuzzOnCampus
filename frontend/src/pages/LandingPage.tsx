@@ -91,6 +91,32 @@ const universities: University[] = [
       fadeSide: '#fff5f5',
     },
   },
+  {
+    id: 'general',
+    name: 'General Email (Testing)',
+    domain: 'gmail.com',
+    lat: 41.1006,
+    lng: -80.6481,
+    website: '#',
+    logo: '',
+    photos: [
+      'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1600&q=80',
+      'https://images.unsplash.com/photo-1607237138185-eedd9c632b0b?w=1600&q=80',
+      'https://images.unsplash.com/photo-1498243691581-b145c3f54a5a?w=1600&q=80',
+    ],
+    theme: {
+      primary: '#fd8b00',
+      secondary: '#8c4a00',
+      accent: '#fd8b00',
+      bg: '#fff5ed',
+      inputBg: '#ffd6ab',
+      text: '#452800',
+      subtext: '#5c5b5b',
+      buttonGradient: 'linear-gradient(135deg, #fd8b00 0%, #8c4a00 100%)',
+      overlay: '#fd8b00/20',
+      fadeSide: '#fff5ed',
+    },
+  },
 ]
 
 const defaultTheme = {
@@ -155,15 +181,28 @@ export default function LandingPage() {
       setError('Please enter your university email.')
       return
     }
-    if (!email.endsWith(selectedUniversity.domain)) {
-      setError(`Email must end in @${selectedUniversity.domain}`)
+    const emailDomain = email.split('@')[1]?.toLowerCase() ?? ''
+    const base = selectedUniversity.domain.toLowerCase()
+    if (emailDomain !== base && !emailDomain.endsWith(`.${base}`)) {
+      setError(`Email must be from ${base} or a subdomain (e.g. student.${base})`)
       return
     }
     if (isSignup && !username.trim()) {
       setError('Please enter a username.')
       return
     }
-    navigate('/map')
+    navigate('/auth', {
+      state: {
+        university_id: selectedUniversity.id,
+        universityName: selectedUniversity.name,
+        universityDomain: selectedUniversity.domain,
+        isSignup,
+        email,
+        username,
+        photos: selectedUniversity.photos,
+        theme: selectedUniversity.theme,
+      },
+    })
   }
 
   return (
