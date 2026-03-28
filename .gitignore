@@ -19,8 +19,7 @@ functions/lib/
 # Python seed scripts
 __pycache__/
 *.pyc
-.venv/
-venv/
+scripts/.venv/
 
 # macOS
 .DS_Store
