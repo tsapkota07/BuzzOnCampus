@@ -63,6 +63,44 @@ Update these checkboxes as things get built. This is how Claude knows what exist
 
 ---
 
+## Environment Setup (run once after cloning)
+**Run everything from the repo root** (`/BuzzOnCampus/`), not from inside a subfolder.
+
+```bash
+# Clone and enter repo
+git clone https://github.com/tsapkota07/BuzzOnCampus.git
+cd BuzzOnCampus
+
+# Run the setup script — handles Node, frontend, functions, Python venv
+bash setup.sh
+
+# Copy env file and fill it in (get values from Tirsan)
+cp frontend/.env.example frontend/.env
+```
+
+After setup, each person works from their own directory:
+```bash
+# Shafi — frontend
+cd frontend && npm run dev
+
+# Tirsan — functions
+cd functions && npm run build
+firebase deploy --only functions
+
+# Sumaiya — seed scripts
+source scripts/.venv/bin/activate
+python scripts/seed_universities.py
+```
+
+To add a new Python package (Sumaiya):
+```bash
+source scripts/.venv/bin/activate
+pip install <package>
+pip freeze > scripts/requirements.txt   # update the file so teammates get it too
+```
+
+---
+
 ## Firebase First-Time Setup
 **Tirsan does this once, then shares config with team.**
 1. Go to console.firebase.google.com → create project (name it anything, e.g. `buzzoncampus`)
