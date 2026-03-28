@@ -3,6 +3,9 @@
 .env.local
 .env.production
 
+# Firebase project config — local only
+.firebaserc
+
 # Firebase service account — never commit
 serviceAccountKey.json
 *serviceAccount*.json
@@ -20,6 +23,11 @@ functions/lib/
 __pycache__/
 *.pyc
 scripts/.venv/
+
+# Firebase debug logs
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
 
 # macOS
 .DS_Store

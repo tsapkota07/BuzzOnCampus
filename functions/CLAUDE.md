@@ -16,9 +16,9 @@ Update these as you go. Claude reads this to know what's deployed.
 - [x] `src/index.ts` — exports all functions
 - [x] Firebase project created — `buzzoncampus-f9257`
 - [x] `.firebaserc` updated with real project ID
-- [ ] `firebase login` done
-- [ ] `cd functions && npm install` done
-- [ ] `npm run build` passes with no errors
+- [x] `firebase login` done
+- [x] `cd functions && npm install` done
+- [x] `npm run build` passes with no errors
 
 ### Functions
 - [x] `validateEduEmail` — written (blocks non-.edu signup)
@@ -27,9 +27,9 @@ Update these as you go. Claude reads this to know what's deployed.
 - [x] `getFeed` — written (returns recent pins)
 - [ ] All 4 deployed to Firebase
 - [ ] `validateEduEmail` tested (try registering with gmail — should fail)
-- [ ] `onUserCreated` tested (sign up with .edu — check Firestore users/{uid} has buzz_balance: 20)
-- [ ] `completePin` tested end-to-end (post pin → complete → check Buzz balance changed)
-- [ ] `getFeed` tested (returns array of pins)
+- [x] `onUserCreated` tested (sign up with .edu — check Firestore users/{uid} has buzz_balance: 20)
+- [x] `completePin` tested end-to-end (post pin → complete → check Buzz balance changed)
+- [x] `getFeed` tested (returns array of pins)
 
 ### Firestore
 - [ ] `firebase deploy --only firestore` done (rules + indexes live)
