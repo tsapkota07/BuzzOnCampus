@@ -22,10 +22,11 @@ Update these checkboxes as things get built. This is how Claude knows what exist
 - [x] Firebase config files committed (`firebase.json`, `firestore.rules`, `firestore.indexes.json`)
 - [x] Frontend project structure created (Vite + React + TS, Tailwind, all deps in `package.json`)
 - [x] Zustand stores scaffolded (`useAuthStore`, `useMapStore`, `useBuzzStore`)
-- [x] Firebase app init scaffolded (`frontend/src/api/firebase.ts`)
+- [x] Firebase app init scaffolded (`frontend/src/api/firebase.ts`) — real config hardcoded
 - [x] Cloud Functions scaffolded (4 functions written, not yet deployed)
-- [ ] Firebase project created in console and `.firebaserc` updated with real project ID
-- [ ] `frontend/.env` filled with real Firebase config values
+- [x] Firebase project created — project ID: `buzzoncampus-f9257`
+- [x] `.firebaserc` updated with real project ID
+- [ ] `frontend/.env` created with Mapbox token (Firebase config already hardcoded in `firebase.ts`)
 
 ### Auth
 - [ ] `SignupForm.tsx` built
@@ -35,11 +36,11 @@ Update these checkboxes as things get built. This is how Claude knows what exist
 - [ ] 20 Buzz Points awarded on signup (via `onUserCreated` Cloud Function)
 
 ### Map & Pins
-- [ ] `MapView.tsx` built with Mapbox
-- [ ] 3D buildings toggle working
+- [x] `MapView.tsx` built with Mapbox — 3D toggle working, `onMapClick` prop exposed
+- [x] 3D buildings toggle working
+- [x] `AvatarMarker.tsx` rendering 3D rotating avatar (`red.glb`)
 - [ ] Pins loading from Firestore (`onSnapshot`)
 - [ ] `PinMarker.tsx` rendering pins with correct colors
-- [ ] `AvatarMarker.tsx` rendering 3D avatar
 - [ ] `PinDetailSidebar.tsx` opens on pin click
 - [ ] `FilterButtons.tsx` filtering pins by type
 
