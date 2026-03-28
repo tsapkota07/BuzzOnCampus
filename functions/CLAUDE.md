@@ -14,8 +14,8 @@ Update these as you go. Claude reads this to know what's deployed.
 ### Setup
 - [x] Functions project scaffolded (`package.json`, `tsconfig.json`)
 - [x] `src/index.ts` — exports all functions
-- [ ] Firebase project created in console
-- [ ] `.firebaserc` updated with real project ID
+- [x] Firebase project created — `buzzoncampus-f9257`
+- [x] `.firebaserc` updated with real project ID
 - [ ] `firebase login` done
 - [ ] `cd functions && npm install` done
 - [ ] `npm run build` passes with no errors
