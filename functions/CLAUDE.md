@@ -1,77 +1,132 @@
 # Functions CLAUDE.md — Tirsan's Zone
 # Primary owner: Tirsan | Read root CLAUDE.md first.
+# Last updated: all 4 functions scaffolded, not yet deployed.
 
-## Your Ownership
-You own everything in `functions/`. No one else edits this folder.
-You also own `firebase.json` and `firestore.indexes.json`.
+## What You Own
+- `functions/` — entirely yours, no one else edits
+- `firebase.json` — Firebase service config
+- `firestore.indexes.json` — composite query indexes
+- `.firebaserc` — project ID (update this first)
 
-## Your Files
-```
-functions/src/
-  index.ts                      ← exports all functions (already scaffolded)
-  auth/
-    validateEduEmail.ts         ← blocks non-.edu signups (already written)
-    onUserCreated.ts            ← awards 20 Buzz Points on user creation (already written)
-  pins/
-    completePin.ts              ← atomic Buzz transfer + pin completion (already written)
-  feed/
-    getFeed.ts                  ← returns recent pins for university feed (already written)
-```
+## Current Status
+Update these as you go. Claude reads this to know what's deployed.
+
+### Setup
+- [x] Functions project scaffolded (`package.json`, `tsconfig.json`)
+- [x] `src/index.ts` — exports all functions
+- [ ] Firebase project created in console
+- [ ] `.firebaserc` updated with real project ID
+- [ ] `firebase login` done
+- [ ] `cd functions && npm install` done
+- [ ] `npm run build` passes with no errors
+
+### Functions
+- [x] `validateEduEmail` — written (blocks non-.edu signup)
+- [x] `onUserCreated` — written (awards 20 Buzz Points)
+- [x] `completePin` — written (atomic Buzz transfer)
+- [x] `getFeed` — written (returns recent pins)
+- [ ] All 4 deployed to Firebase
+- [ ] `validateEduEmail` tested (try registering with gmail — should fail)
+- [ ] `onUserCreated` tested (sign up with .edu — check Firestore users/{uid} has buzz_balance: 20)
+- [ ] `completePin` tested end-to-end (post pin → complete → check Buzz balance changed)
+- [ ] `getFeed` tested (returns array of pins)
+
+### Firestore
+- [ ] `firebase deploy --only firestore` done (rules + indexes live)
+- [ ] Seed data loaded (Sumaiya runs the scripts — confirm with her)
+
+### Hosting
+- [ ] `firebase deploy --only hosting` done (after Shafi builds frontend)
 
 ## Getting Started
 ```bash
-# Install Firebase CLI if you haven't
+# One-time setup
 npm install -g firebase-tools
 firebase login
 
-# Install function dependencies
+# Update .firebaserc with your real project ID
+# (open .firebaserc, change "buzzoncampus" to your actual Firebase project ID)
+
+# Install and build
 cd functions
 npm install
+npm run build        # must pass before deploying
 
-# Build TypeScript
-npm run build
-
-# Deploy all functions
+# Deploy functions only
 firebase deploy --only functions
 
-# Or run locally with emulator
+# Deploy everything
+firebase deploy
+
+# Run locally (useful for testing before deploy)
 firebase emulators:start --only functions,firestore,auth
 ```
 
-## What's Already Built
-The four core functions are scaffolded and working. Your job is to:
-1. Deploy them and confirm they work
-2. Test `completePin` end-to-end with real Firestore data
-3. Fix any bugs that come up during testing
-4. Add `cancelPin` if time allows (updates pin status to 'cancelled')
+## What's Already Written — Read Before Touching
+
+### `src/auth/validateEduEmail.ts`
+Firebase Auth trigger that runs before every new user is created.
+Throws an error (which Firebase surfaces as a registration failure) if email doesn't end in `.edu`.
+No changes needed unless you want to restrict to specific universities by domain.
+
+### `src/auth/onUserCreated.ts`
+Firestore trigger that fires when a new document is created in `users/{userId}`.
+Updates `buzz_balance` to 20. Sumaiya's `AuthContext` creates the user doc — this fires automatically after.
+
+### `src/pins/completePin.ts`
+Callable function — the most important one. Atomic Firestore transaction:
+- Validates caller is authenticated and pin is still active
+- **volunteer/event pin:** caller (participant) receives `buzz_reward` points
+- **help pin:** pin creator pays `buzz_reward` points to the caller (helper)
+- Updates `pin.status` to `'completed'`
+- Writes a `transactions` document for the audit log
+- Rolls back everything if any step fails (e.g. insufficient balance)
+
+### `src/feed/getFeed.ts`
+Callable function — queries `pins` collection filtered by `university_id`, ordered by `created_at` desc, limit 30.
+Returns `{ items: pin[] }`.
 
 ## Adding a New Function
-1. Create a file in the appropriate `src/` subfolder
+1. Create `src/<category>/<functionName>.ts`
 2. Export it from `src/index.ts`
-3. Run `npm run build` and `firebase deploy --only functions`
+3. Run `npm run build`
+4. Run `firebase deploy --only functions`
+5. Add it to the **Cloud Functions Reference** table in root `CLAUDE.md`
 
-## completePin Logic (understand this well)
-The Buzz Points transfer is atomic via `db.runTransaction()`:
-- **volunteer/event pin:** the participant (caller) earns `buzz_reward` points
-- **help pin:** the pin creator pays `buzz_reward` points to the helper (caller)
-- On any error (insufficient balance, pin already completed): transaction rolls back, nothing changes
-- After success: pin.status = 'completed', transaction record created
+## Fixing the `joinPin` participant_count (Sumaiya needs this)
+The `participant_count` field needs `FieldValue.increment(1)` — not a plain update.
+Tell Sumaiya to use this in `frontend/src/api/pins.ts`:
+```ts
+import { increment, updateDoc, doc } from 'firebase/firestore'
+await updateDoc(doc(db, 'pins', pinId), { participant_count: increment(1) })
+```
+This is a Firestore atomic increment — safe for concurrent joins.
 
 ## Firestore Indexes
-If you add new queries with multiple `where()` + `orderBy()`, add the composite index to
-`firestore.indexes.json` and run `firebase deploy --only firestore:indexes`.
-The three indexes already in the file cover the core queries.
+Current indexes in `firestore.indexes.json` cover:
+1. `pins` by `university_id` + `status` + `created_at` — used by map onSnapshot
+2. `pins` by `university_id` + `type` + `status` — used by category filtering
+3. `participations` by `user_id` + `joined_at` — used by profile page
 
-## Deployment Checklist
-- [ ] `firebase login` and project set to `buzzoncampus` in `.firebaserc`
-- [ ] `cd functions && npm install && npm run build`
-- [ ] `firebase deploy --only functions`
-- [ ] `firebase deploy --only firestore` (deploys rules + indexes)
-- [ ] Test `validateEduEmail` — try registering with a non-.edu email, confirm it's blocked
-- [ ] Test `completePin` — post a pin, complete it, check Buzz balance updated in Firestore
-- [ ] `firebase deploy --only hosting` after Shafi builds the frontend
+If you add a new query with multiple `where()` + `orderBy()` fields, add the index:
+```bash
+firebase deploy --only firestore:indexes
+```
+
+## Deployment Order
+Do these in order — each step depends on the previous:
+1. `firebase deploy --only firestore` — rules + indexes must be live before frontend can read/write
+2. `firebase deploy --only functions` — functions must be live before auth flow works
+3. Tell Sumaiya functions are deployed so she can test auth
+4. Tell Shafi the project ID and config so he can fill `.env`
+5. `firebase deploy --only hosting` — last, after Shafi runs `npm run build`
 
 ## Do Not
-- Do not touch `frontend/` or `scripts/` or `firestore.rules`
-- Do not change Firestore field names without telling Sumaiya (her API layer reads them)
-- Do not add new callable functions without updating root `CLAUDE.md` contracts section
+- Do not touch `frontend/`, `firestore.rules`, or `scripts/`
+- Do not rename Firestore field names — Sumaiya's API layer and seed scripts use them
+- Do not add callable functions without documenting them in root `CLAUDE.md`
+- Do not commit `serviceAccountKey.json` if you download one for testing
+
+## How to Keep This File Current
+Tick off checkboxes in **Current Status** as each step is completed.
+If a function's behavior changes, update the description in **What's Already Written**.
