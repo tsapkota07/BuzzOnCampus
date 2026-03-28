@@ -146,6 +146,8 @@ export default function LandingPage() {
   const [photos, setPhotos] = useState(defaultPhotos)
   const [isSignup, setIsSignup] = useState(false)
   const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -191,6 +193,17 @@ export default function LandingPage() {
       setError('Please enter a username.')
       return
     }
+<<<<<<< HEAD
+    if (!password) {
+      setError('Please enter your password.')
+      return
+    }
+    if (isSignup && password !== confirmPassword) {
+      setError('Passwords do not match.')
+      return
+    }
+    navigate('/map')
+=======
     navigate('/auth', {
       state: {
         university_id: selectedUniversity.id,
@@ -203,6 +216,7 @@ export default function LandingPage() {
         theme: selectedUniversity.theme,
       },
     })
+>>>>>>> ee974413515b64d98e46403cab5f25a0038b481c
   }
 
   return (
@@ -302,6 +316,36 @@ export default function LandingPage() {
                 />
               </div>
 
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-[0.05em]" style={{ color: theme.secondary }}>
+                  Password
+                </label>
+                <input
+                  className="w-full h-14 px-6 rounded-lg border-none focus:outline-none focus:ring-2 transition-all"
+                  style={{ backgroundColor: theme.inputBg, color: theme.text }}
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                />
+              </div>
+
+              {isSignup && (
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-[0.05em]" style={{ color: theme.secondary }}>
+                    Confirm Password
+                  </label>
+                  <input
+                    className="w-full h-14 px-6 rounded-lg border-none focus:outline-none focus:ring-2 transition-all"
+                    style={{ backgroundColor: theme.inputBg, color: theme.text }}
+                    type="password"
+                    placeholder="Confirm your password"
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                  />
+                </div>
+              )}
+
               {error && <p className="text-sm font-semibold px-1" style={{ color: theme.accent }}>{error}</p>}
 
               <button
@@ -318,7 +362,7 @@ export default function LandingPage() {
               <button type="button"
                 className="font-bold text-sm transition-colors"
                 style={{ color: theme.subtext }}
-                onClick={() => { setIsSignup(!isSignup); setError('') }}
+                onClick={() => { setIsSignup(!isSignup); setError(''); setPassword(''); setConfirmPassword('') }}
               >
                 {isSignup ? 'Already have an account? Log In' : 'Create Account'}
               </button>
