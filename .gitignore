@@ -18,6 +18,7 @@ frontend/.vite/
 # Functions
 functions/node_modules/
 functions/lib/
+functions/.env
 
 # Python seed scripts
 __pycache__/

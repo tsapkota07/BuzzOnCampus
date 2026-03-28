@@ -1,6 +1,6 @@
 # Functions CLAUDE.md — Tirsan's Zone
 # Primary owner: Tirsan | Read root CLAUDE.md first.
-# Last updated: all 4 functions scaffolded, not yet deployed.
+# Last updated: sendOtp + verifyOtp built, Blaze plan needed before deploy.
 
 ## What You Own
 - `functions/` — entirely yours, no one else edits
@@ -25,11 +25,11 @@ Update these as you go. Claude reads this to know what's deployed.
 - [x] `onUserCreated` — written (awards 20 Buzz Points)
 - [x] `completePin` — written (atomic Buzz transfer)
 - [x] `getFeed` — written (returns recent pins)
-- [ ] All 4 deployed to Firebase
-- [ ] `validateEduEmail` tested (try registering with gmail — should fail)
-- [x] `onUserCreated` tested (sign up with .edu — check Firestore users/{uid} has buzz_balance: 20)
-- [x] `completePin` tested end-to-end (post pin → complete → check Buzz balance changed)
-- [x] `getFeed` tested (returns array of pins)
+- [x] `sendOtp` — written (generates 6-digit OTP, stores in Firestore, emails via Resend)
+- [x] `verifyOtp` — written (validates code, handles expiry + max 3 attempts)
+- [ ] All functions deployed — BLOCKED: need Firebase Blaze plan upgrade
+- [ ] `sendOtp` tested end-to-end
+- [ ] `verifyOtp` tested end-to-end
 
 ### Firestore
 - [ ] `firebase deploy --only firestore` done (rules + indexes live)
