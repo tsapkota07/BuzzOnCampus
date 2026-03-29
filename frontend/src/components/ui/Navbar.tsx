@@ -1,16 +1,28 @@
 import { useMapStore } from '../../store/useMapStore'
+import { useAuthStore } from '../../store/useAuthStore'
+
+const UNIVERSITY_THEMES: Record<string, { primary: string; label: string }> = {
+  ysu: { primary: '#CC0000', label: 'YSU' },
+  kent: { primary: '#002664', label: 'Kent' },
+  osu: { primary: '#BB0000', label: 'OSU' },
+  other: { primary: '#1985a1', label: '🐝' },
+}
 
 const FILTERS = [
-  { key: 'event',     label: 'Events',    icon: '📅', color: '#3B82F6' },
-  { key: 'volunteer', label: 'Volunteer', icon: '🤝', color: '#22C55E' },
-  { key: 'help',      label: 'Help',      icon: '👋', color: '#F59E0B' },
-  { key: 'places',    label: 'Places',    icon: '📍', color: '#8B5CF6' },
+  { key: 'event', label: 'Events', icon: '' },
+  { key: 'volunteer', label: 'Volunteer', icon: '' },
+  { key: 'help', label: 'Help', icon: '' },
+  { key: 'places', label: 'Places', icon: '' },
 ]
 
 export default function Navbar() {
-  // TODO: Get buzz balance and user from useAuthStore
-  const buzzBalance = 20
-  const userInitial = 'S'
+  const user = useAuthStore(state => state.user)
+  const buzzBalance = user?.buzz_balance ?? 0
+  const userInitial = user?.email?.[0]?.toUpperCase() ?? '?'
+  const universityId = user?.university_id ?? 'other'
+
+  const theme = UNIVERSITY_THEMES[universityId] ?? UNIVERSITY_THEMES.other
+  const primary = theme.primary
 
   const { activeFilters, toggleFilter } = useMapStore()
 
@@ -28,7 +40,7 @@ export default function Navbar() {
         {/* Left — wordmark */}
         <div
           className="text-xl font-extrabold italic tracking-tight shrink-0"
-          style={{ color: '#fd8b00', fontFamily: 'Manrope, sans-serif' }}
+          style={{ color: primary, fontFamily: 'Manrope, sans-serif' }}
         >
           BuzzOnCampus
         </div>
@@ -39,7 +51,7 @@ export default function Navbar() {
             className="flex items-center gap-2 px-4 h-9 rounded-full w-[40%] min-w-[220px]"
             style={{ background: 'rgba(255,255,255,0.1)' }}
           >
-            <span className="material-symbols-outlined text-white/50 text-[18px]">search</span>
+            <span className="text-white/50 text-[18px]">🔍</span>
             <input
               type="text"
               placeholder="Search for events, people or places..."
@@ -53,16 +65,15 @@ export default function Navbar() {
           {/* Buzz Points pill */}
           <div
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold"
-            style={{ background: 'rgba(255,255,255,0.1)', color: '#fd8b00' }}
+            style={{ background: 'rgba(255,255,255,0.1)', color: primary }}
           >
             🪙 {buzzBalance} Buzz
           </div>
 
           {/* User avatar circle */}
-          {/* TODO: Get from useAuthStore — show avatar_url if available */}
           <div
             className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm cursor-pointer"
-            style={{ background: '#fd8b00' }}
+            style={{ background: primary }}
           >
             {userInitial}
           </div>
@@ -74,7 +85,6 @@ export default function Navbar() {
         className="flex justify-center gap-2 px-5 py-2"
         style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(24px)' }}
       >
-        {/* TODO: Connect filter state to pin rendering — hide/show markers based on activeFilters array */}
         {FILTERS.map(f => {
           const active = activeFilters.includes(f.key)
           return (
@@ -83,9 +93,9 @@ export default function Navbar() {
               onClick={() => toggleFilter(f.key)}
               className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold transition-all duration-200"
               style={{
-                background: active ? f.color : 'transparent',
-                color: active ? '#fff' : f.color,
-                border: `1.5px solid ${f.color}`,
+                background: active ? primary : 'transparent',
+                color: active ? '#fff' : primary,
+                border: `1.5px solid ${primary}`,
               }}
             >
               <span>{f.icon}</span>
