@@ -1,6 +1,6 @@
 # BuzzOnCampus — Root CLAUDE.md
 # Read by everyone. Updated as the project evolves.
-# Last updated: auth fully built (SignupForm, LoginForm, OtpScreen handles full signup inline, AuthPage supports pre-collected data from LandingPage), LandingPage built, 404 built. username field added to users schema.
+# Last updated: map fully built — live pins, side panel, pin creation form, placement mode, real-time Firestore sync, geofence (5-mile campus radius, enforced client + server).
 
 ## Project
 BuzzOnCampus — live 3D campus map platform built at Kent State Hackathon, March 28–29 (18–20 hrs).
@@ -23,7 +23,7 @@ Update these checkboxes as things get built. This is how Claude knows what exist
 - [x] Frontend project structure created (Vite + React + TS, Tailwind, all deps in `package.json`)
 - [x] Zustand stores scaffolded (`useAuthStore`, `useMapStore`, `useBuzzStore`)
 - [x] Firebase app init scaffolded (`frontend/src/api/firebase.ts`) — real config hardcoded
-- [x] Cloud Functions scaffolded (4 functions written, not yet deployed)
+- [x] Cloud Functions scaffolded and deployed (sendOtp, verifyOtp, completePin, getFeed, validateEduEmail)
 - [x] Firebase project created — project ID: `buzzoncampus-f9257`
 - [x] `.firebaserc` updated with real project ID
 - [ ] `frontend/.env` created with Mapbox token (Firebase config already hardcoded in `firebase.ts`)
@@ -42,26 +42,37 @@ Update these checkboxes as things get built. This is how Claude knows what exist
 - [ ] 20 Buzz Points awarded on signup — verify `buzz_balance: 20` in Firestore after new signup
 
 ### Map & Pins
-- [x] `MapView.tsx` built with Mapbox — 3D toggle working, `onMapClick` prop exposed
+- [x] `MapView.tsx` built with Mapbox — 3D toggle, GPS dot, auto-center on campus, placement mode
 - [x] 3D buildings toggle working
 - [x] `AvatarMarker.tsx` rendering 3D rotating avatar (`red.glb`)
-- [ ] Pins loading from Firestore (`onSnapshot`)
-- [ ] `PinMarker.tsx` rendering pins with correct colors
-- [ ] `PinDetailSidebar.tsx` opens on pin click
-- [ ] `FilterButtons.tsx` filtering pins by type
+- [x] Pins loading from Firestore via `subscribeToPins` (`onSnapshot`) — live real-time sync
+- [x] `DetailPanel.tsx` — side panel: pin detail, place detail, create-pin form (2-step inline)
+- [x] `Navbar.tsx` built
+- [x] `useMapStore.ts` — full store: livePins, selectedPin, selectedPlace, createPinContext, pinPlacementMode, hoveredPlace
+- [x] `api/pins.ts` — `createPin()` + `subscribeToPins()` wired to Firestore
+- [x] Filter buttons in Navbar — event/volunteer/help/places toggles
+- [x] "Drop a Buzz" placement mode — cursor becomes 📍, hover detects POI, panel previews building, click confirms
+- [x] "Post Here" from building panel — locks place name + coords into create form
+- [x] `universityCoords.ts` — coords + 5-mile radius per university, `isWithinCampus()`, `isRestrictedAccount()`
+- [x] Geofence overlay — red tint outside 5-mile campus radius (Mapbox fill layer with world-minus-circle polygon)
+- [x] Geofence enforcement — blocked at placement confirm, blocked at form submit, blocked at Firestore rule
+- [ ] `PinMarker.tsx` — distinct per-type markers (using AvatarMarker for now)
+- [ ] `joinPin()` wired to Cloud Function (Tirsan deploys)
+- [ ] Buzz Points transfer confirmed working end-to-end
 
 ### Pin Actions
-- [ ] `PostPinModal.tsx` built (category → details → map click for location)
-- [ ] `joinPin()` working
-- [ ] `completePin` Cloud Function deployed ✓ — not yet tested
+- [x] Pin creation: inline `CreatePinForm` in `DetailPanel` (replaced PostPinModal) — 2-step, Firestore submit, loading/error states
+- [x] `PostPinModal.tsx` — deleted, replaced by inline panel form (Phase 7D)
+- [ ] `joinPin()` working — Join button exists in panel, Cloud Function not yet wired
+- [ ] `completePin` Cloud Function deployed ✓ — not yet tested end-to-end
 - [ ] Buzz Points transfer confirmed working end-to-end
 
 ### Feed & Polish
-- [ ] `PinFeed.tsx` built (campus activity feed)
+- [ ] `PinFeed.tsx` built (campus activity feed / list view — Phase 9, deferred)
 - [ ] `UserProfile.tsx` built
 - [x] `LandingPage.tsx` built — university selector, photo slideshow, navigates to `/auth`
 - [x] `NotFoundPage.tsx` built — custom 404 with Go Back / Back to Home
-- [ ] `Navbar.tsx` built with Buzz balance counter
+- [x] `Navbar.tsx` built with filter toggles
 
 ### Deployment
 - [x] Cloud Functions deployed (`firebase deploy --only functions`)
@@ -203,6 +214,15 @@ const completePin = httpsCallable(functions, 'completePin')
 const result = await completePin({ pinId: 'abc123' })
 ```
 
+## Geofence Rules (Phase 10 — enforced at 3 layers)
+University accounts (any `university_id` that isn't `other`/`general`) are restricted to a
+5-mile radius around their campus centre for **posting**. Viewing is unrestricted everywhere.
+- **Layer 1:** `isWithinCampus()` in `universityCoords.ts` — checked at placement confirm (MapView)
+- **Layer 2:** `outOfBounds` check in `CreatePinForm` — disables submit button
+- **Layer 3:** `withinCampus()` Firestore security rule on `pins` create — server-side hard block
+`other`/`general` accounts → `Infinity` radius → no restriction anywhere.
+Radius values live in `frontend/src/utils/universityCoords.ts` AND `firestore.rules` — keep in sync.
+
 ## Real-time Pins Pattern
 Firestore replaces WebSockets. Use `onSnapshot` in `MapView.tsx`:
 ```ts
@@ -240,6 +260,18 @@ const unsub = onSnapshot(q, snapshot => {
 - `tirsan` — Tirsan's branch
 - `sumaiya` — Sumaiya's branch
 - `main` — merge here only when a full feature is tested end-to-end
+
+## Known Security Issues (Phase 11 — fix before launch)
+| Severity | Issue | Fix |
+|----------|-------|-----|
+| CRITICAL | Firestore rule trusts `university_id` from pin payload — attacker sets `university_id:'other'` in auth store from console, bypasses geofence | Rule must read user doc: `get(.../users/$(request.auth.uid)).data.university_id` |
+| CRITICAL | No input length limits — title/desc can be huge, rendered without sanitization (XSS) | Max title=100, desc=500 in `CreatePinForm` handleSubmit |
+| CRITICAL | `buzzCost` has no max — HTML min=1 bypassable via DevTools | Validate 1–1000 before `createPin()` call |
+| HIGH | `createPin()` in pins.ts has no auth check — relies solely on Firestore rules | Add `getAuth().currentUser` guard at top of function |
+| HIGH | If `lockedPlace` is null, pin coords default to `mapCenter` which can change (race) | Require `lockedPlace` set before submit |
+| MEDIUM | Pins store `user_id` not `username` — deleted accounts show UID | Cache `username` into pin doc at creation time |
+| LOW | No rate limiting on pin creation | Cloud Function rate limit (Tirsan) |
+| LOW | `universities` collection is world-readable | Restrict to `request.auth != null` |
 
 ## Do Not Build
 - Rating/reputation system, Leaderboard, In-app chat
