@@ -1,6 +1,6 @@
 # BuzzOnCampus — Root CLAUDE.md
 # Read by everyone. Updated as the project evolves.
-# Last updated: auth built (SignupForm, LoginForm, AuthPage), LandingPage built, 404 page built.
+# Last updated: auth fully built (SignupForm, LoginForm, OtpScreen handles full signup inline, AuthPage supports pre-collected data from LandingPage), LandingPage built, 404 built. username field added to users schema.
 
 ## Project
 BuzzOnCampus — live 3D campus map platform built at Kent State Hackathon, March 28–29 (18–20 hrs).
@@ -37,9 +37,9 @@ Update these checkboxes as things get built. This is how Claude knows what exist
 - [x] `sendOtp` Cloud Function written — emails OTP via Resend from noreply@mail.tirsansapkota.com
 - [x] `verifyOtp` Cloud Function written — validates code, expiry, attempts
 - [x] `mail.tirsansapkota.com` verified in Resend via Cloudflare
-- [ ] All Cloud Functions deployed — BLOCKED: need Firebase Blaze plan upgrade
-- [ ] OTP flow tested end-to-end
-- [ ] 20 Buzz Points awarded on signup (via `onUserCreated` — needs deploy)
+- [x] All Cloud Functions deployed — `sendOtp`, `verifyOtp`, `completePin`, `getFeed`, `validateEduEmail` live
+- [x] OTP flow tested end-to-end — signup, login, unverified login all working
+- [ ] 20 Buzz Points awarded on signup — verify `buzz_balance: 20` in Firestore after new signup
 
 ### Map & Pins
 - [x] `MapView.tsx` built with Mapbox — 3D toggle working, `onMapClick` prop exposed
@@ -53,7 +53,7 @@ Update these checkboxes as things get built. This is how Claude knows what exist
 ### Pin Actions
 - [ ] `PostPinModal.tsx` built (category → details → map click for location)
 - [ ] `joinPin()` working
-- [ ] `completePin` Cloud Function deployed and tested
+- [ ] `completePin` Cloud Function deployed ✓ — not yet tested
 - [ ] Buzz Points transfer confirmed working end-to-end
 
 ### Feed & Polish
@@ -64,8 +64,8 @@ Update these checkboxes as things get built. This is how Claude knows what exist
 - [ ] `Navbar.tsx` built with Buzz balance counter
 
 ### Deployment
-- [ ] Cloud Functions deployed (`firebase deploy --only functions`)
-- [ ] Frontend built and deployed (`firebase deploy --only hosting`)
+- [x] Cloud Functions deployed (`firebase deploy --only functions`)
+- [x] Frontend built and deployed — live at https://buzzoncampus-f9257.web.app
 - [ ] Seed data loaded into production Firestore
 - [ ] Full demo rehearsed
 
@@ -126,6 +126,7 @@ pip freeze > scripts/requirements.txt   # update the file so teammates get it to
 ```
 users/{uid}
   email: string
+  username: string              # display name, collected at signup
   university_id: string
   buzz_balance: number          # starts at 20, managed by Cloud Functions
   color: string                 # hex e.g. '#14B8A6'

@@ -1,6 +1,6 @@
 # Bridge CLAUDE.md — Sumaiya's Zone
 # Primary owner: Sumaiya | Read root CLAUDE.md first.
-# Last updated: firebase.ts scaffolded, no forms or API functions written yet.
+# Last updated: auth forms + OtpScreen + AuthPage all built. OtpScreen handles full account creation inline (no api/auth.ts needed for signup). username field added to users Firestore doc.
 
 ## Your Role
 You are the bridge. You own:
@@ -23,8 +23,9 @@ Update these as you build. Claude reads this to know what exists.
 - [ ] `users.ts` — getUniversities(), getBusinesses(), getFeed()
 
 ### Auth Components
-- [ ] `components/auth/SignupForm.tsx`
-- [ ] `components/auth/LoginForm.tsx`
+- [x] `components/auth/SignupForm.tsx` — collects email/username/password, calls sendOtp, then hands off to OtpScreen
+- [x] `components/auth/LoginForm.tsx` — Firebase sign-in + load user doc
+- [x] `components/auth/OtpScreen.tsx` — verifies OTP **and** creates Auth account + Firestore doc inline; writes username field
 - [ ] `components/auth/AuthContext.tsx` (wrapping App.tsx — coordinate with Shafi)
 
 ### Pin Components
@@ -34,7 +35,7 @@ Update these as you build. Claude reads this to know what exists.
 
 ### Other Components
 - [ ] `components/profile/UserProfile.tsx`
-- [ ] `pages/AuthPage.tsx`
+- [x] `pages/AuthPage.tsx` — university-themed, supports pre-collected signup data passed via router state from LandingPage, auto-sends OTP on mount
 - [ ] `pages/ProfilePage.tsx`
 
 ### Firebase Config
@@ -74,24 +75,23 @@ export { auth, db, functions } from './firebase'
 ```
 
 ### `src/api/auth.ts`
-```ts
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth'
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
-import { auth, db } from './firebase'
+> **Note:** `register()` is NOT used for signup — `OtpScreen.tsx` handles account creation
+> inline after OTP verification. If you write `auth.ts`, only `login()` and `logout()` are needed.
+> The Firestore user doc written by OtpScreen includes: email, username, university_id,
+> buzz_balance (0), color (random), avatar_url (null), created_at.
 
-export async function register(email: string, password: string, universityId: string, color: string) {
-  const cred = await createUserWithEmailAndPassword(auth, email, password)
-  // Create user doc — onUserCreated Cloud Function will set buzz_balance to 20
-  await setDoc(doc(db, 'users', cred.user.uid), {
-    email,
-    university_id: universityId,
-    buzz_balance: 0,
-    color,
-    avatar_url: null,
-    created_at: serverTimestamp(),
-  })
-  return cred.user
+```ts
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth'
+import { auth } from './firebase'
+
+export async function login(email: string, password: string) {
+  return signInWithEmailAndPassword(auth, email, password)
 }
+
+export async function logout() {
+  return signOut(auth)
+}
+```
 
 export async function login(email: string, password: string) {
   return signInWithEmailAndPassword(auth, email, password)

@@ -1,10 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useLocation, useNavigate, Navigate } from 'react-router-dom'
-import { httpsCallable } from 'firebase/functions'
-import { functions } from '../api/firebase'
 import { useAuthStore } from '../store/useAuthStore'
-import SignupForm from '../components/auth/SignupForm'
 import LoginForm from '../components/auth/LoginForm'
+import SignupForm from '../components/auth/SignupForm'
 import OtpScreen from '../components/auth/OtpScreen'
 
 interface LocationState {
@@ -49,7 +47,7 @@ const defaultPhotos = [
   'https://images.unsplash.com/photo-1498243691581-b145c3f54a5a?w=1600&q=80',
 ]
 
-type Screen = 'form' | 'otp'
+type Screen = 'login' | 'signup' | 'otp'
 
 export default function AuthPage() {
   const user = useAuthStore(state => state.user)
@@ -63,39 +61,44 @@ export default function AuthPage() {
   const theme = state.theme ?? defaultTheme
   const photos = state.photos ?? defaultPhotos
 
-  const [isSignup, setIsSignup] = useState(state.isSignup ?? false)
-  const [screen, setScreen] = useState<Screen>('form')
+  const [screen, setScreen] = useState<Screen>(state.isSignup ? 'signup' : 'login')
+  // OTP screen state — set when user needs to verify
   const [pendingEmail, setPendingEmail] = useState('')
+  const [pendingUid, setPendingUid] = useState<string | null>(null)  // login mode: uid of unverified user
   const [pendingSignupData, setPendingSignupData] = useState<{
     email: string; password: string; username: string
-  } | null>(null)
-  const [currentSlide] = useState(0)
+  } | null>(null)  // signup mode: data to create account after OTP
 
   if (user) return <Navigate to="/map" replace />
   if (!university_id) return <Navigate to="/" replace />
 
-  // Called by SignupForm once OTP has been sent — switches to OTP screen
+  // Called by LoginForm when credentials are correct but account not yet OTP-verified
+  const handleUnverified = (uid: string, email: string) => {
+    setPendingEmail(email)
+    setPendingUid(uid)
+    setPendingSignupData(null)
+    setScreen('otp')
+  }
+
+  // Called by SignupForm after OTP is sent successfully
   const handleOtpSent = (email: string, password: string, username: string) => {
     setPendingEmail(email)
+    setPendingUid(null)
     setPendingSignupData({ email, password, username })
     setScreen('otp')
   }
 
-  // Called by OtpScreen once code is verified — SignupForm finishes account creation
-  const handleOtpVerified = () => {
-    // SignupForm handles the actual Firebase account creation via onVerified callback
-    setScreen('form')
+  const headings: Record<Screen, string> = {
+    login: 'Welcome back',
+    signup: 'Create your account',
+    otp: 'Check your inbox',
   }
 
-  const heading = screen === 'otp'
-    ? 'Check your inbox'
-    : isSignup ? 'Create your account' : 'Welcome back'
-
-  const subheading = screen === 'otp'
-    ? `We emailed a 6-digit code to verify your university address.`
-    : isSignup
-      ? `Sign up with your ${universityDomain} email to get started.`
-      : `Sign in to access your campus feed.`
+  const subheadings: Record<Screen, string> = {
+    login: 'Sign in to access your campus feed.',
+    signup: `Sign up with your ${universityDomain} email to get started.`,
+    otp: 'If your email is valid, a 6-digit code has been sent to it.',
+  }
 
   return (
     <main
@@ -133,22 +136,23 @@ export default function AuthPage() {
 
         <div className="flex-grow flex flex-col justify-center max-w-md mx-auto w-full">
           <h1 className="text-4xl font-extrabold tracking-tight leading-[1.1] mb-2" style={{ color: theme.text }}>
-            {heading}
+            {headings[screen]}
           </h1>
           <p className="font-medium leading-relaxed mb-8 opacity-80" style={{ color: theme.subtext }}>
-            {subheading}
+            {subheadings[screen]}
           </p>
 
-          {screen === 'otp' ? (
-            <OtpScreen
-              email={pendingEmail}
-              university_id={university_id}
+          {screen === 'login' && (
+            <LoginForm
+              universityDomain={universityDomain}
+              initialEmail={state.email}
               theme={theme}
-              onVerified={handleOtpVerified}
-              onBack={() => setScreen('form')}
-              pendingSignupData={pendingSignupData}
+              onSwitchToSignup={() => setScreen('signup')}
+              onUnverified={handleUnverified}
             />
-          ) : isSignup ? (
+          )}
+
+          {screen === 'signup' && (
             <SignupForm
               university_id={university_id}
               universityDomain={universityDomain}
@@ -156,15 +160,20 @@ export default function AuthPage() {
               initialUsername={state.username}
               initialPassword={state.password}
               theme={theme}
-              onSwitchToLogin={() => setIsSignup(false)}
+              onSwitchToLogin={() => setScreen('login')}
               onOtpSent={handleOtpSent}
             />
-          ) : (
-            <LoginForm
-              universityDomain={universityDomain}
-              initialEmail={state.email}
+          )}
+
+          {screen === 'otp' && (
+            <OtpScreen
+              email={pendingEmail}
+              uid={pendingUid ?? undefined}
+              university_id={university_id}
               theme={theme}
-              onSwitchToSignup={() => setIsSignup(true)}
+              pendingSignupData={pendingSignupData}
+              onVerified={() => {}}
+              onBack={() => setScreen(pendingSignupData ? 'signup' : 'login')}
             />
           )}
         </div>
@@ -190,7 +199,7 @@ export default function AuthPage() {
             className="absolute inset-0 bg-cover bg-center"
             style={{
               backgroundImage: `url('${photo}')`,
-              opacity: i === currentSlide ? 1 : 0,
+              opacity: i === 0 ? 1 : 0,
               transition: 'opacity 1s ease-in-out',
             }}
           />

@@ -27,16 +27,17 @@ Update these as you go. Claude reads this to know what's deployed.
 - [x] `getFeed` — written (returns recent pins)
 - [x] `sendOtp` — written (generates 6-digit OTP, stores in Firestore, emails via Resend)
 - [x] `verifyOtp` — written (validates code, handles expiry + max 3 attempts)
-- [ ] All functions deployed — BLOCKED: need Firebase Blaze plan upgrade
+- [x] `sendOtp`, `verifyOtp`, `completePin`, `getFeed`, `validateEduEmail` deployed
+- [ ] `onUserCreated` NOT showing in deployed functions — needs recheck/redeploy
 - [ ] `sendOtp` tested end-to-end
 - [ ] `verifyOtp` tested end-to-end
 
 ### Firestore
-- [ ] `firebase deploy --only firestore` done (rules + indexes live)
+- [ ] `firebase deploy --only firestore` done — indexes NOT deployed (production returns empty)
 - [ ] Seed data loaded (Sumaiya runs the scripts — confirm with her)
 
 ### Hosting
-- [ ] `firebase deploy --only hosting` done (after Shafi builds frontend)
+- [x] `firebase deploy --only hosting` done — live at https://buzzoncampus-f9257.web.app
 
 ## Getting Started
 ```bash

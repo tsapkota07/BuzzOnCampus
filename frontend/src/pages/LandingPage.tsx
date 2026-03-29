@@ -141,13 +141,8 @@ const defaultPhotos = [
 export default function LandingPage() {
   const navigate = useNavigate()
   const [selectedUniversity, setSelectedUniversity] = useState<University | null>(null)
-  const [email, setEmail] = useState('')
   const [currentSlide, setCurrentSlide] = useState(0)
   const [photos, setPhotos] = useState(defaultPhotos)
-  const [isSignup, setIsSignup] = useState(false)
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -172,44 +167,14 @@ export default function LandingPage() {
     setPhotos(found ? found.photos : defaultPhotos)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    if (!selectedUniversity) {
-      setError('Please select your university first.')
-      return
-    }
-    if (!email) {
-      setError('Please enter your university email.')
-      return
-    }
-    const emailDomain = email.split('@')[1]?.toLowerCase() ?? ''
-    const base = selectedUniversity.domain.toLowerCase()
-    if (emailDomain !== base && !emailDomain.endsWith(`.${base}`)) {
-      setError(`Email must be from ${base} or a subdomain (e.g. student.${base})`)
-      return
-    }
-    if (isSignup && !username.trim()) {
-      setError('Please enter a username.')
-      return
-    }
-    if (!password) {
-      setError('Please enter your password.')
-      return
-    }
-    if (isSignup && password !== confirmPassword) {
-      setError('Passwords do not match.')
-      return
-    }
+  const goToAuth = (isSignup: boolean) => {
+    if (!selectedUniversity) { setError('Please select your university first.'); return }
     navigate('/auth', {
       state: {
         university_id: selectedUniversity.id,
         universityName: selectedUniversity.name,
         universityDomain: selectedUniversity.domain,
         isSignup,
-        email,
-        username,
-        password,
         photos: selectedUniversity.photos,
         theme: selectedUniversity.theme,
       },
@@ -256,7 +221,7 @@ export default function LandingPage() {
             Your institutional gateway to events, networking, and academic resources. Select your university to begin.
           </p>
 
-          <form className="space-y-6" onSubmit={handleSubmit}>
+          <div className="space-y-6">
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-[0.05em]" style={{ color: theme.secondary }}>
                 Institutional Access
@@ -264,11 +229,7 @@ export default function LandingPage() {
               <div className="relative">
                 <select
                   className="w-full h-14 px-6 rounded-lg border-none focus:outline-none focus:ring-2 transition-all appearance-none cursor-pointer font-medium"
-                  style={{
-                    backgroundColor: theme.inputBg,
-                    color: theme.text,
-                    transition: 'background-color 0.6s ease',
-                  }}
+                  style={{ backgroundColor: theme.inputBg, color: theme.text, transition: 'background-color 0.6s ease' }}
                   value={selectedUniversity?.id ?? ''}
                   onChange={handleUniversityChange}
                 >
@@ -282,94 +243,27 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className="space-y-4 pt-2">
-              {isSignup && (
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-[0.05em]" style={{ color: theme.secondary }}>
-                    Username
-                  </label>
-                  <input
-                    className="w-full h-14 px-6 rounded-lg border-none focus:outline-none focus:ring-2 transition-all"
-                    style={{ backgroundColor: theme.inputBg, color: theme.text }}
-                    type="text"
-                    placeholder="Choose a username"
-                    value={username}
-                    onChange={e => setUsername(e.target.value)}
-                  />
-                </div>
-              )}
+            {error && <p className="text-sm font-semibold px-1" style={{ color: theme.accent }}>{error}</p>}
 
-              <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-[0.05em]" style={{ color: theme.secondary }}>
-                  University Email
-                </label>
-                <input
-                  className="w-full h-14 px-6 rounded-lg border-none focus:outline-none focus:ring-2 transition-all"
-                  style={{ backgroundColor: theme.inputBg, color: theme.text }}
-                  type="email"
-                  placeholder={selectedUniversity ? `name@${selectedUniversity.domain}` : 'name@university.edu'}
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-[0.05em]" style={{ color: theme.secondary }}>
-                  Password
-                </label>
-                <input
-                  className="w-full h-14 px-6 rounded-lg border-none focus:outline-none focus:ring-2 transition-all"
-                  style={{ backgroundColor: theme.inputBg, color: theme.text }}
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                />
-              </div>
-
-              {isSignup && (
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-[0.05em]" style={{ color: theme.secondary }}>
-                    Confirm Password
-                  </label>
-                  <input
-                    className="w-full h-14 px-6 rounded-lg border-none focus:outline-none focus:ring-2 transition-all"
-                    style={{ backgroundColor: theme.inputBg, color: theme.text }}
-                    type="password"
-                    placeholder="Confirm your password"
-                    value={confirmPassword}
-                    onChange={e => setConfirmPassword(e.target.value)}
-                  />
-                </div>
-              )}
-
-              {error && <p className="text-sm font-semibold px-1" style={{ color: theme.accent }}>{error}</p>}
-
+            <div className="flex flex-col gap-3 pt-2">
               <button
-                type="submit"
+                onClick={() => goToAuth(false)}
                 className="w-full h-14 rounded-lg text-white font-bold text-lg shadow-lg hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2"
                 style={{ background: theme.buttonGradient }}
               >
-                {isSignup ? 'Create Account' : 'Log In'}
-                <span className="material-symbols-outlined">{isSignup ? 'person_add' : 'login'}</span>
+                Log In
+                <span className="material-symbols-outlined">login</span>
               </button>
-            </div>
-
-            <div className="flex justify-between items-center px-2 pt-4">
-              <button type="button"
-                className="font-bold text-sm transition-colors"
-                style={{ color: theme.subtext }}
-                onClick={() => { setIsSignup(!isSignup); setError(''); setPassword(''); setConfirmPassword('') }}
+              <button
+                onClick={() => goToAuth(true)}
+                className="w-full h-14 rounded-lg font-bold text-lg border-2 hover:brightness-95 active:scale-95 transition-all flex items-center justify-center gap-2"
+                style={{ borderColor: theme.accent, color: theme.accent, backgroundColor: 'transparent' }}
               >
-                {isSignup ? 'Already have an account? Log In' : 'Create Account'}
+                Create Account
+                <span className="material-symbols-outlined">person_add</span>
               </button>
-              {!isSignup && (
-                <button type="button" className="font-bold text-sm transition-colors" style={{ color: theme.subtext }}>
-                  Forgotten Password?
-                </button>
-              )}
             </div>
-          </form>
+          </div>
         </div>
 
         <footer className="mt-auto pt-8 flex flex-wrap gap-x-6 gap-y-2 opacity-60">
