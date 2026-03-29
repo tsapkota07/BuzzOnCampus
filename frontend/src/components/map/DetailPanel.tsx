@@ -2,15 +2,15 @@ import { useMapStore } from '../../store/useMapStore'
 import type { MockPlacePost } from '../../store/useMapStore'
 
 const PIN_COLORS: Record<string, string> = {
-  event:     '#3B82F6',
+  event: '#3B82F6',
   volunteer: '#22C55E',
-  help:      '#F59E0B',
+  help: '#F59E0B',
 }
 
 const PIN_LABELS: Record<string, string> = {
-  event:     'EVENT',
+  event: 'EVENT',
   volunteer: 'VOLUNTEER',
-  help:      'HELP',
+  help: 'HELP',
 }
 
 function DealCard({ post }: { post: MockPlacePost }) {
@@ -27,7 +27,6 @@ function DealCard({ post }: { post: MockPlacePost }) {
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm font-bold" style={{ color: '#fd8b00' }}>🪙 {post.buzzCost} Buzz to redeem</span>
       </div>
-      {/* TODO: Call POST /places/{id}/posts/{id}/redeem and deduct Buzz Points from useAuthStore */}
       <button
         className="w-full py-2.5 rounded-lg font-bold text-white text-sm"
         style={{ background: 'linear-gradient(135deg, #F59E0B, #d97706)' }}
@@ -88,10 +87,10 @@ function ReviewCard({ post }: { post: MockPlacePost }) {
 }
 
 function PostCard({ post }: { post: MockPlacePost }) {
-  if (post.type === 'deal')         return <DealCard post={post} />
-  if (post.type === 'event')        return <EventCard post={post} />
+  if (post.type === 'deal') return <DealCard post={post} />
+  if (post.type === 'event') return <EventCard post={post} />
   if (post.type === 'announcement') return <AnnouncementCard post={post} />
-  if (post.type === 'review')       return <ReviewCard post={post} />
+  if (post.type === 'review') return <ReviewCard post={post} />
   return null
 }
 
@@ -109,7 +108,7 @@ export default function DetailPanel() {
     <div
       style={{
         position: 'fixed',
-        top: 0,
+        top: 120,
         right: 0,
         bottom: 0,
         width: 360,
@@ -120,12 +119,14 @@ export default function DetailPanel() {
         display: 'flex',
         flexDirection: 'column',
         boxShadow: '-8px 0 32px rgba(0,0,0,0.5)',
+        borderTopLeftRadius: 16,
+        overflowY: 'auto',
       }}
     >
       {/* Close button */}
       <button
         onClick={close}
-        className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-white z-10"
+        className="absolute top-3 right-4 w-8 h-8 rounded-full flex items-center justify-center text-white z-10"
         style={{ background: 'rgba(255,255,255,0.1)' }}
       >
         ✕
@@ -183,7 +184,6 @@ export default function DetailPanel() {
 
           {/* Action button */}
           <div className="mt-auto">
-            {/* TODO: Call POST /pins/{id}/join or /accept then refresh pin data and update Buzz balance */}
             <button
               className="w-full py-3.5 rounded-xl font-bold text-white text-base"
               style={{ background: 'linear-gradient(135deg, #fd8b00, #8c4a00)' }}
@@ -212,7 +212,6 @@ export default function DetailPanel() {
           </div>
 
           {/* Posts list — scrollable */}
-          {/* TODO: Replace with GET /places/{id}/posts */}
           <div className="flex-1 overflow-y-auto p-6 pb-24">
             {selectedPlace.posts.length === 0 ? (
               <p className="text-center text-sm mt-8" style={{ color: '#888' }}>
@@ -228,7 +227,6 @@ export default function DetailPanel() {
           {/* POST HERE button — fixed at bottom */}
           <div className="absolute bottom-0 left-0 right-0 p-4"
             style={{ background: 'linear-gradient(to top, #1a1a2e 80%, transparent)' }}>
-            {/* TODO: Open PostHereModal with place_id pre-filled */}
             <button
               className="w-full py-3.5 rounded-xl font-bold text-white text-base"
               style={{ background: 'linear-gradient(135deg, #fd8b00, #8c4a00)' }}
