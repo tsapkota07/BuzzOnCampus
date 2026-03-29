@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { httpsCallable } from 'firebase/functions'
 import { createUserWithEmailAndPassword } from 'firebase/auth'
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, setDoc, updateDoc, getDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db, functions } from '../../api/firebase'
-import { useAuthStore } from '../../store/useAuthStore'
+import { useAuthStore, AppUser } from '../../store/useAuthStore'
 
 const USER_COLORS = ['#14B8A6', '#3B82F6', '#EC4899', '#8B5CF6', '#F59E0B', '#10B981', '#EF4444', '#6366F1']
 
@@ -15,6 +15,7 @@ interface PendingSignupData {
 
 interface OtpScreenProps {
   email: string
+  uid?: string                          // login mode: uid of the already-authed but unverified user
   university_id: string
   theme: {
     inputBg: string
@@ -25,12 +26,12 @@ interface OtpScreenProps {
     accent: string
     bg: string
   }
-  pendingSignupData: PendingSignupData | null
+  pendingSignupData: PendingSignupData | null  // signup mode: create account after OTP
   onVerified: () => void
   onBack: () => void
 }
 
-export default function OtpScreen({ email, university_id, theme, pendingSignupData, onVerified, onBack }: OtpScreenProps) {
+export default function OtpScreen({ email, uid, university_id, theme, pendingSignupData, onVerified, onBack }: OtpScreenProps) {
   const setUser = useAuthStore(state => state.setUser)
   const [digits, setDigits] = useState(['', '', '', '', '', ''])
   const [error, setError] = useState('')
@@ -79,39 +80,55 @@ export default function OtpScreen({ email, university_id, theme, pendingSignupDa
   const handleVerify = async () => {
     const code = digits.join('')
     if (code.length < 6) { setError('Enter all 6 digits.'); return }
-    if (!pendingSignupData) { setError('Signup data missing. Please go back and try again.'); return }
 
     setLoading(true)
     setError('')
     try {
-      // Step 1: verify OTP with Cloud Function
       const verifyOtp = httpsCallable(functions, 'verifyOtp')
       await verifyOtp({ email, code })
 
-      // Step 2: create Firebase Auth account
-      const { email: signupEmail, password, username } = pendingSignupData
-      const cred = await createUserWithEmailAndPassword(auth, signupEmail, password)
-      const color = USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)]
+      if (uid) {
+        // LOGIN MODE: user already authenticated, just mark as verified and load into store
+        await updateDoc(doc(db, 'users', uid), { email_verified: true })
+        const snap = await getDoc(doc(db, 'users', uid))
+        const data = snap.data()!
+        setUser({
+          uid,
+          email: data.email,
+          university_id: data.university_id,
+          buzz_balance: data.buzz_balance ?? 0,
+          color: data.color,
+          avatar_url: data.avatar_url ?? null,
+        } as AppUser)
+      } else if (pendingSignupData) {
+        // SIGNUP MODE: create Firebase Auth account and Firestore doc
+        const { email: signupEmail, password, username } = pendingSignupData
+        const cred = await createUserWithEmailAndPassword(auth, signupEmail, password)
+        const color = USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)]
 
-      // Step 3: write Firestore user doc
-      await setDoc(doc(db, 'users', cred.user.uid), {
-        email: signupEmail,
-        username,
-        university_id,
-        buzz_balance: 0,   // onUserCreated Cloud Function sets this to 20
-        color,
-        avatar_url: null,
-        created_at: serverTimestamp(),
-      })
+        await setDoc(doc(db, 'users', cred.user.uid), {
+          email: signupEmail,
+          username,
+          university_id,
+          buzz_balance: 0,   // onUserCreated Cloud Function sets this to 20
+          color,
+          avatar_url: null,
+          email_verified: true,
+          created_at: serverTimestamp(),
+        })
 
-      setUser({
-        uid: cred.user.uid,
-        email: signupEmail,
-        university_id,
-        buzz_balance: 0,
-        color,
-        avatar_url: null,
-      })
+        setUser({
+          uid: cred.user.uid,
+          email: signupEmail,
+          university_id,
+          buzz_balance: 0,
+          color,
+          avatar_url: null,
+        } as AppUser)
+      } else {
+        setError('Missing account data. Please go back and try again.')
+        return
+      }
 
       onVerified()
     } catch (err: unknown) {
@@ -144,9 +161,8 @@ export default function OtpScreen({ email, university_id, theme, pendingSignupDa
     <div className="space-y-6">
       <div>
         <p className="font-medium leading-relaxed opacity-80" style={{ color: theme.subtext }}>
-          We sent a 6-digit code to
+          If <strong style={{ color: theme.text }}>{email}</strong> is valid, a verification code has been sent. Enter it below.
         </p>
-        <p className="font-bold" style={{ color: theme.text }}>{email}</p>
       </div>
 
       <div className="flex gap-3 justify-between" onPaste={handlePaste}>

@@ -1,6 +1,6 @@
 # Frontend CLAUDE.md — Shafi's Zone
 # Primary owner: Shafi | Read root CLAUDE.md first.
-# Last updated: stores scaffolded, no components built yet.
+# Last updated: MapView, AvatarMarker, LandingPage, NotFoundPage, MapPage built. Auth pages built by Sumaiya.
 
 ## What You Own
 Everything in `frontend/` EXCEPT these (Sumaiya's):
@@ -27,7 +27,8 @@ Update these as you build. Claude reads this to know what exists.
 - [ ] `src/components/map/PinDetailSidebar.tsx`
 - [ ] `src/components/map/FilterButtons.tsx`
 - [ ] `src/components/ui/Navbar.tsx`
-- [ ] `src/pages/LandingPage.tsx`
+- [x] `src/pages/LandingPage.tsx` — university selector + photo slideshow, passes signup data via router state to AuthPage
+- [x] `src/pages/NotFoundPage.tsx` — custom 404 with Go Back / Back to Home
 - [x] `src/pages/MapPage.tsx`
 
 ## Getting Started

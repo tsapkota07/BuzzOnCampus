@@ -16,6 +16,7 @@ interface LoginFormProps {
     accent: string
   }
   onSwitchToSignup: () => void
+  onUnverified: (uid: string, email: string) => void
 }
 
 export default function LoginForm({
@@ -23,6 +24,7 @@ export default function LoginForm({
   initialEmail = '',
   theme,
   onSwitchToSignup,
+  onUnverified,
 }: LoginFormProps) {
   const setUser = useAuthStore(state => state.setUser)
   const [email, setEmail] = useState(initialEmail)
@@ -46,6 +48,13 @@ export default function LoginForm({
       }
 
       const data = snap.data()
+
+      if (!data.email_verified) {
+        onUnverified(cred.user.uid, email)
+        setLoading(false)
+        return
+      }
+
       setUser({
         uid: cred.user.uid,
         email: data.email,
