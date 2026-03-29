@@ -1,6 +1,6 @@
 # Frontend CLAUDE.md — Shafi's Zone
 # Primary owner: Shafi | Read root CLAUDE.md first.
-# Last updated: MapView, AvatarMarker, LandingPage, NotFoundPage, MapPage built. Auth pages built by Sumaiya.
+# Last updated: map fully built — live pins, DetailPanel with inline CreatePinForm, placement mode (Phase 8), geofence overlay + enforcement (Phase 10), real-time Firestore sync.
 
 ## What You Own
 Everything in `frontend/` EXCEPT these (Sumaiya's):
@@ -19,17 +19,19 @@ Update these as you build. Claude reads this to know what exists.
 - [x] `src/App.tsx` — router shell (routes commented out, uncomment as pages are built)
 - [x] `src/index.css` — Tailwind base styles
 - [x] `src/store/useAuthStore.ts` — scaffolded
-- [x] `src/store/useMapStore.ts` — scaffolded with Pin type, all actions
+- [x] `src/store/useMapStore.ts` — full store: livePins, selectedPin, selectedPlace, createPinContext, pinPlacementMode, hoveredPlace, HoveredPlace type
 - [x] `src/store/useBuzzStore.ts` — scaffolded
-- [x] `src/components/map/MapView.tsx`
-- [x] `src/components/map/AvatarMarker.tsx`
-- [ ] `src/components/map/PinMarker.tsx`
-- [ ] `src/components/map/PinDetailSidebar.tsx`
-- [ ] `src/components/map/FilterButtons.tsx`
-- [ ] `src/components/ui/Navbar.tsx`
+- [x] `src/components/map/MapView.tsx` — live pins, GPS dot, auto-center, placement mode, geofence overlay, out-of-bounds toast
+- [x] `src/components/map/AvatarMarker.tsx` — 3D rotating avatar marker
+- [x] `src/components/map/DetailPanel.tsx` — pin detail, place detail, inline CreatePinForm (2-step), placement mode preview views
+- [x] `src/components/ui/Navbar.tsx` — filter toggles (event/volunteer/help/places)
+- [x] `src/api/pins.ts` — `createPin()`, `subscribeToPins()` (Firestore onSnapshot)
+- [x] `src/utils/universityCoords.ts` — coords + 5-mile radiusM per university, `isWithinCampus()`, `isRestrictedAccount()`
 - [x] `src/pages/LandingPage.tsx` — university selector + photo slideshow, passes signup data via router state to AuthPage
 - [x] `src/pages/NotFoundPage.tsx` — custom 404 with Go Back / Back to Home
-- [x] `src/pages/MapPage.tsx`
+- [x] `src/pages/MapPage.tsx` — mounts MapView + DetailPanel, "Drop a Buzz" button, ESC cancels placement mode
+- [ ] `src/components/map/PinMarker.tsx` — distinct per-type markers (using AvatarMarker for now)
+- [ ] `src/pages/ListPage.tsx` — upcoming events / feed list view (Phase 9, deferred)
 
 ## Getting Started
 ```bash
@@ -77,6 +79,16 @@ interface Pin {
 // useBuzzStore  (src/store/useBuzzStore.ts)
 { balance: number, setBalance(n: number) }
 ```
+
+## Key Architecture Decisions (read before editing map components)
+
+- **PostPinModal is deleted.** Pin creation lives in `DetailPanel.tsx` as `CreatePinForm` (inline 2-step form).
+- **Pin placement mode** (`pinPlacementMode` in MapStore): "Drop a Buzz" enters this mode instead of opening the form directly. User hovers buildings on map → panel previews → click confirms → form opens with building locked. ESC cancels.
+- **`placementModeRef`** in MapView: Mapbox `onLoad` handlers are registered once and can't read React state. A `useRef` is kept in sync via `useEffect` so Mapbox handlers can read it.
+- **`hoveredPlace`** must NOT be cleared on map mouse leave — only on `onMouseMove` over empty space — so the "Click to pin here" button in the panel still has a valid target.
+- **`pendingCenterRef` + `centeredRef`**: GPS fix can arrive before or after Mapbox `onLoad`. These refs bridge the timing gap so the map centers exactly once.
+- **Geofence**: `universityCoords.ts` owns all radius values. Both the frontend helpers and `firestore.rules` must be kept in sync (same radii). Currently 8047m (5 miles) for all universities.
+- **`other`/`general` university_id** → `Infinity` radius → no posting restrictions anywhere.
 
 ## Building MapView.tsx
 ```ts

@@ -2,6 +2,51 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // ── Geofence helpers ──────────────────────────────────────────────────────
+    // Equirectangular approximation — accurate enough within 10km.
+    // Returns distance in metres between two lat/lng points.
+    function haversineMetres(lat1, lng1, lat2, lng2) {
+      let dLat = (lat2 - lat1) * 111320.0;
+      let dLng = (lng2 - lng1) * 111320.0 * (lat1 > 0.0 ? lat1 : -lat1) / 90.0;
+      return (dLat * dLat + dLng * dLng) < 0.0 ? 0.0 :
+        math.sqrt(dLat * dLat + dLng * dLng);
+    }
+
+    // University centre coords and radii (must stay in sync with universityCoords.ts)
+    function uniLat(uid) {
+      return uid == 'kent'       ? 41.1534 :
+             uid == 'youngstown' ? 41.1006 :
+             uid == 'ysu'        ? 41.1006 :
+             uid == 'ohio'       ? 40.0067 :
+             uid == 'osu'        ? 40.0067 : null;
+    }
+    function uniLng(uid) {
+      return uid == 'kent'       ? -81.3579 :
+             uid == 'youngstown' ? -80.6481 :
+             uid == 'ysu'        ? -80.6481 :
+             uid == 'ohio'       ? -83.0305 :
+             uid == 'osu'        ? -83.0305 : null;
+    }
+    function uniRadius(uid) {
+      return uid == 'kent'       ? 8047 :
+             uid == 'youngstown' ? 8047 :
+             uid == 'ysu'        ? 8047 :
+             uid == 'ohio'       ? 8047 :
+             uid == 'osu'        ? 8047 : null;
+    }
+
+    // Returns true if the pin coords are within the user's campus radius,
+    // OR if the account is unrestricted (other/general/unrecognised university_id).
+    function withinCampus(pinLat, pinLng, universityId) {
+      let cLat = uniLat(universityId);
+      let cLng = uniLng(universityId);
+      let radius = uniRadius(universityId);
+      // Unrecognised university → no restriction
+      return cLat == null
+        || haversineMetres(pinLat, pinLng, cLat, cLng) <= radius;
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     // Users — read own doc, create own doc on signup, updates via Cloud Functions
     match /users/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
@@ -9,13 +54,18 @@ service cloud.firestore {
       allow update, delete: if false; // Cloud Functions only
     }
 
-    // Pins — anyone authenticated at same university can read
-    // Create allowed from client; update/delete via Cloud Functions
+    // Pins — anyone authenticated can read
+    // Create: must own the pin, status must be active, and coords must be within campus
     match /pins/{pinId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null
         && request.resource.data.user_id == request.auth.uid
-        && request.resource.data.status == 'active';
+        && request.resource.data.status == 'active'
+        && withinCampus(
+             request.resource.data.lat,
+             request.resource.data.lng,
+             request.resource.data.university_id
+           );
       allow update, delete: if false; // Cloud Functions only
     }
 

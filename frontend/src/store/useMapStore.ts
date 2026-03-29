@@ -54,12 +54,28 @@ export interface MockPlacePost {
   rating?: number
 }
 
+export interface CreatePinContext {
+  lockedPlace?: { name: string; lat: number; lng: number }
+  mapCenter?: { lat: number; lng: number }
+}
+
+export interface HoveredPlace {
+  name: string
+  category: string
+  lat: number
+  lng: number
+}
+
 interface MapStore {
   pins: Pin[]
   filters: PinType[]
   activeFilters: string[]
+  livePins: MockUserPin[]
   selectedPin: MockUserPin | null
   selectedPlace: MockPlace | null
+  createPinContext: CreatePinContext | null
+  pinPlacementMode: boolean
+  hoveredPlace: HoveredPlace | null
   setPins: (pins: Pin[]) => void
   addPin: (pin: Pin) => void
   updatePin: (id: string, updates: Partial<Pin>) => void
@@ -67,8 +83,12 @@ interface MapStore {
   setFilters: (filters: PinType[]) => void
   setActiveFilters: (filters: string[]) => void
   toggleFilter: (filter: string) => void
+  setLivePins: (pins: MockUserPin[]) => void
   setSelectedPin: (pin: MockUserPin | null) => void
   setSelectedPlace: (place: MockPlace | null) => void
+  setCreatePinContext: (ctx: CreatePinContext | null) => void
+  setPinPlacementMode: (active: boolean) => void
+  setHoveredPlace: (place: HoveredPlace | null) => void
 }
 
 const ALL_TYPES: PinType[] = ['event', 'volunteer', 'help', 'business']
@@ -78,8 +98,12 @@ export const useMapStore = create<MapStore>(set => ({
   pins: [],
   filters: ALL_TYPES,
   activeFilters: ALL_FILTERS,
+  livePins: [],
   selectedPin: null,
   selectedPlace: null,
+  createPinContext: null,
+  pinPlacementMode: false,
+  hoveredPlace: null,
   setPins: (pins) => set({ pins }),
   addPin: (pin) => set(state => ({ pins: [...state.pins, pin] })),
   updatePin: (id, updates) =>
@@ -95,6 +119,12 @@ export const useMapStore = create<MapStore>(set => ({
         ? state.activeFilters.filter(f => f !== filter)
         : [...state.activeFilters, filter],
     })),
-  setSelectedPin: (pin) => set({ selectedPin: pin, selectedPlace: null }),
-  setSelectedPlace: (place) => set({ selectedPlace: place, selectedPin: null }),
+  setLivePins: (livePins) => set({ livePins }),
+  setSelectedPin: (pin) => set({ selectedPin: pin, selectedPlace: null, createPinContext: null, pinPlacementMode: false, hoveredPlace: null }),
+  setSelectedPlace: (place) => set({ selectedPlace: place, selectedPin: null, createPinContext: null, pinPlacementMode: false, hoveredPlace: null }),
+  setCreatePinContext: (ctx) => set({ createPinContext: ctx, selectedPin: null, selectedPlace: null, pinPlacementMode: false, hoveredPlace: null }),
+  setPinPlacementMode: (active) => active
+    ? set({ pinPlacementMode: true, selectedPin: null, selectedPlace: null, createPinContext: null })
+    : set({ pinPlacementMode: false, hoveredPlace: null }),
+  setHoveredPlace: (place) => set({ hoveredPlace: place }),
 }))
