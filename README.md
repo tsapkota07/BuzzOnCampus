@@ -26,4 +26,4 @@ Built at Kent State Hackathon, March 2026 (18–20 hrs).
 
 - **Shafi** — Frontend / Map
 - **Tirsan** — Cloud Functions / Deploy
-- **Sumaiya** — Auth / API layer / Seed data
+- **Sumaiya** — API layer / Seed data
