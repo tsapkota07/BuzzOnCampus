@@ -49,12 +49,6 @@ export default function LoginForm({
 
       const data = snap.data()
 
-      if (!data.email_verified) {
-        onUnverified(cred.user.uid, email)
-        setLoading(false)
-        return
-      }
-
       setUser({
         uid: cred.user.uid,
         email: data.email,

@@ -31,6 +31,19 @@ export default function Navbar() {
   const [searchExpanded, setSearchExpanded] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
+  const cancelBtnRef = useRef<HTMLButtonElement>(null)
+  const logoutBtnRef = useRef<HTMLButtonElement>(null)
+
+  // Esc to close modal + focus Cancel when modal opens
+  useEffect(() => {
+    if (!logoutModalOpen) return
+    cancelBtnRef.current?.focus()
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setLogoutModalOpen(false)
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [logoutModalOpen])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -208,11 +221,23 @@ export default function Navbar() {
             style={{
               position: 'fixed',
               inset: 0,
-              background: 'rgba(0,0,0,0.6)',
+              background: 'rgba(0,0,0,0.5)',
+              backdropFilter: 'blur(6px)',
+              WebkitBackdropFilter: 'blur(6px)',
               zIndex: 200,
             }}
           />
           <div
+            onKeyDown={e => {
+              if (e.key === 'Tab') {
+                e.preventDefault()
+                if (document.activeElement === cancelBtnRef.current) {
+                  logoutBtnRef.current?.focus()
+                } else {
+                  cancelBtnRef.current?.focus()
+                }
+              }
+            }}
             style={{
               position: 'fixed',
               top: '50%',
@@ -234,6 +259,7 @@ export default function Navbar() {
             </p>
             <div className="flex gap-3">
               <button
+                ref={cancelBtnRef}
                 onClick={() => setLogoutModalOpen(false)}
                 className="flex-1 py-2.5 rounded-xl font-bold text-sm"
                 style={{ background: 'rgba(255,255,255,0.08)', color: '#ccc' }}
@@ -241,6 +267,7 @@ export default function Navbar() {
                 Cancel
               </button>
               <button
+                ref={logoutBtnRef}
                 onClick={handleLogoutConfirm}
                 className="flex-1 py-2.5 rounded-xl font-bold text-sm"
                 style={{ background: '#ff5555', color: 'white' }}
