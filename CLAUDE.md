@@ -1,16 +1,12 @@
 # BuzzOnCampus — Root CLAUDE.md
 # Read by everyone. Updated as the project evolves.
-# Last updated: 2026-03-29. Phases 1–15 + Phase 11 security fixes complete. All deployed to
-#   https://buzzoncampus-f9257.web.app. 79 frontend tests passing. Everything is stable.
+# Last updated: 2026-03-29. Phase 13C complete. University ID mismatch fixed (youngstown→ysu,
+#   ohio→osu). Admin is_dev set to False. All deployed to https://buzzoncampus-f9257.web.app.
 #
 # ⚠️  NEXT SESSION — START HERE (Tirsan):
-#   The next thing to work on is Phase 13C: update the `completePin` Cloud Function
-#   (functions/src/pins/completePin.ts) to copy `volunteer_hours` from the pin into the
-#   participation doc with `hours_status: 'pending'` when the pin type is 'volunteer'.
-#   Without this, volunteer hours are stored on the pin but never land in participations,
-#   so the admin approval flow (Phase 14) has nothing to approve.
-#   After 13C, the next priority is Phase 11.5B–C: write scripts/seed_demo_data.py
-#   to populate demo pins + participations so the app doesn't look empty at demo time.
+#   Next priority is Phase 11.5B–C: write scripts/seed_demo_data.py to populate demo pins +
+#   participations so the map doesn't look empty for real (non-dev) users at demo time.
+#   After that: Phase 14E — "Dispute" button on rejected participations in ProfilePage.
 
 ## Project
 BuzzOnCampus — live 3D campus map platform built at Kent State Hackathon, March 28–29 (18–20 hrs).
@@ -49,7 +45,7 @@ Update these checkboxes as things get built. This is how Claude knows what exist
 - [x] `mail.tirsansapkota.com` verified in Resend via Cloudflare
 - [x] All Cloud Functions deployed — `sendOtp`, `verifyOtp`, `completePin`, `getFeed`, `validateEduEmail` live
 - [x] OTP flow tested end-to-end — signup, login, unverified login all working
-- [ ] 20 Buzz Points awarded on signup — verify `buzz_balance: 20` in Firestore after new signup
+- [x] 20 Buzz Points awarded on signup — `onUserCreated` confirmed live 2026-03-29; existing 0-balance users patched via `scripts/patch_university_ids.py`
 
 ### Map & Pins
 - [x] `MapView.tsx` built with Mapbox — 3D toggle, GPS dot, auto-center on campus, placement mode
@@ -100,7 +96,7 @@ Update these checkboxes as things get built. This is how Claude knows what exist
 ### Volunteer Hours
 - [x] `volunteer_hours: number | null` added to `FirestorePin` and `CreatePinInput` in `api/pins.ts`
 - [x] Volunteer hours input in `CreatePinForm` (DetailPanel) — wired to `createPin()` submit
-- [ ] `completePin` Cloud Function — copy `volunteer_hours` from pin into participation doc with `hours_status: 'pending'` (Phase 13C — Tirsan)
+- [x] `completePin` Cloud Function — copy `volunteer_hours` from pin into participation doc with `hours_status: 'pending'` (Phase 13C — ✅ deployed 2026-03-29)
 - [ ] Dispute flow for users — "Dispute" button on rejected participations in ProfilePage (Phase 14E)
 
 ### Tests
@@ -254,7 +250,7 @@ Tirsan owns these. Sumaiya calls them via `httpsCallable`. Shafi does not call t
 |----------|------|---------|-------------|--------|
 | `validateEduEmail` | Auth trigger | Before user created | Blocks non-.edu registration | ✅ deployed (disabled — OTP covers it) |
 | `onUserCreated` | Firestore trigger | On `users/{uid}` create | Sets `buzz_balance` to 20 | ⚠️ not confirmed live |
-| `completePin` | Callable | Called by frontend | Atomic Buzz transfer + sets pin status to 'completed' | ✅ deployed — ⚠️ does NOT yet write participation doc with `volunteer_hours` + `hours_status: 'pending'` — **Phase 13C is the next task** |
+| `completePin` | Callable | Called by frontend | Atomic Buzz transfer + sets pin status to 'completed' + writes participation doc with `volunteer_hours` + `hours_status: 'pending'` for volunteer pins | ✅ deployed 2026-03-29 |
 | `getFeed` | Callable | Called by frontend | Returns 30 most recent active pins for a university | ✅ deployed |
 | `approveVolunteerHours` | Callable | Called by AdminPage | Approve/reject pending volunteer hours; enforces university scope; increments `volunteer_hours_total` on approve | ✅ deployed |
 

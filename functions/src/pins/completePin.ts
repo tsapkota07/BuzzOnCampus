@@ -60,6 +60,21 @@ export const completePin = onCall(async (request) => {
       pin_id: pinId,
       created_at: admin.firestore.FieldValue.serverTimestamp(),
     })
+
+    // Write participation doc (volunteer pins only include hours for admin approval)
+    const participationRef = db.collection('participations').doc()
+    tx.set(participationRef, {
+      pin_id: pinId,
+      user_id: callerId,
+      status: 'completed',
+      joined_at: admin.firestore.FieldValue.serverTimestamp(),
+      volunteer_hours: pinData.type === 'volunteer' ? (pinData.volunteer_hours ?? null) : null,
+      hours_status: pinData.type === 'volunteer' ? 'pending' : null,
+      dispute_reason: null,
+      dispute_count: 0,
+      reviewed_by: null,
+      reviewed_at: null,
+    })
   })
 
   return { success: true }
