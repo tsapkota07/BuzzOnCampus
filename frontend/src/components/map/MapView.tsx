@@ -67,9 +67,10 @@ function buildCircleLineGeoJSON(lat: number, lng: number, radiusM: number): GeoJ
 
 // 3D model per pin type — swap these out as more models are assigned
 const PIN_MODEL: Record<string, string> = {
-  volunteer: '/red.glb',
   event:     '/Alien.glb',
+  volunteer: '/Dinosaur.glb',
   help:      '/Caveman.glb',
+  business:  '/Podium.glb',
 }
 
 /** Spread pins that are within ~20 m of each other into a small circle so
@@ -211,6 +212,12 @@ export default function MapView({ onMapClick, onMapReady }: MapViewProps) {
   }, [user?.university_id])
 
   const visibleUserPins = livePins.filter(p => activeFilters.includes(p.type))
+
+  // Stable 3D assignment: based on pin ID so it never changes across filter toggles
+  // ~50% of pins get 3D models; same pins always get 3D → no Canvas mount/unmount churn
+  const pins3D = useMemo(() => {
+    return new Set(visibleUserPins.filter(p => p.id.charCodeAt(0) % 2 === 0).map(p => p.id))
+  }, [livePins])
 
   const zoomIn  = () => mapRef.current?.zoomIn({ duration: 300 })
   const zoomOut = () => mapRef.current?.zoomOut({ duration: 300 })
@@ -504,12 +511,13 @@ export default function MapView({ onMapClick, onMapReady }: MapViewProps) {
           </Marker>
         )}
 
-        {spreadOverlappingPins(visibleUserPins).map(pin => (
+        {spreadOverlappingPins(visibleUserPins).map((pin) => (
           <Marker key={pin.id} latitude={pin.renderLat} longitude={pin.renderLng} anchor="bottom">
             <AvatarMarker
               userColor={pin.userColor}
               type={pin.type}
               modelPath={PIN_MODEL[pin.type] ?? '/red.glb'}
+              show3D={pins3D.has(pin.id)}
               onClick={() => setSelectedPin(pin)}
             />
           </Marker>

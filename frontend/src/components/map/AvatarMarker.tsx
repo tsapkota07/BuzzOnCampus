@@ -20,6 +20,8 @@ const TYPE_LABELS: Record<string, string> = {
 useGLTF.preload('/red.glb')
 useGLTF.preload('/Alien.glb')
 useGLTF.preload('/Caveman.glb')
+useGLTF.preload('/Dinosaur.glb')
+useGLTF.preload('/Podium.glb')
 
 // Scale per model — adjust if a model renders too small or large
 const MODEL_SCALE: Record<string, number> = {
@@ -61,6 +63,7 @@ interface AvatarMarkerProps {
   userColor?: string
   type?: string
   modelPath?: string
+  show3D?: boolean
   onClick?: () => void
 }
 
@@ -68,6 +71,7 @@ export default function AvatarMarker({
   userColor = '#fd8b00',
   type,
   modelPath = '/red.glb',
+  show3D = true,
   onClick,
 }: AvatarMarkerProps) {
   const badgeColor = type ? TYPE_COLORS[type] : undefined
@@ -75,20 +79,24 @@ export default function AvatarMarker({
 
   return (
     <div className="flex flex-col items-center cursor-pointer" onClick={onClick}>
-      <Canvas
-        style={{ width: 80, height: 80 }}
-        camera={{ position: [2, 2, 3], fov: 50 }}
-      >
-        <ambientLight intensity={1.2} />
-        <directionalLight position={[2, 4, 3]} intensity={2.5} />
-        <directionalLight position={[-2, 1, -1]} intensity={0.8} />
-        <AvatarModel userColor={userColor} modelPath={modelPath} />
-      </Canvas>
+      {show3D && (
+        <Canvas
+          style={{ width: 80, height: 80 }}
+          camera={{ position: [2, 2, 3], fov: 50 }}
+          frameloop="demand"
+          gl={{ antialias: false, powerPreference: 'low-power' }}
+        >
+          <ambientLight intensity={1.2} />
+          <directionalLight position={[2, 4, 3]} intensity={2.5} />
+          <directionalLight position={[-2, 1, -1]} intensity={0.8} />
+          <AvatarModel userColor={badgeColor ?? userColor} modelPath={modelPath} />
+        </Canvas>
+      )}
 
       {badgeColor && badgeLabel && (
         <div
           className="px-2 py-0.5 rounded-full text-white font-bold uppercase"
-          style={{ fontSize: 9, backgroundColor: badgeColor, marginTop: -4 }}
+          style={{ fontSize: 9, backgroundColor: badgeColor, marginTop: show3D ? -4 : 0 }}
         >
           {badgeLabel}
         </div>
