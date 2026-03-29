@@ -9,6 +9,7 @@ import MapPage from './pages/MapPage'
 import LandingPage from './pages/LandingPage'
 import AuthPage from './pages/AuthPage'
 import ProfilePage from './pages/ProfilePage'
+import FeedPage from './pages/FeedPage'
 import NotFoundPage from './pages/NotFoundPage'
 
 function App() {
@@ -65,6 +66,7 @@ function App() {
         <Route path="/auth" element={user ? <Navigate to="/map" replace /> : <AuthPage />} />
         <Route path="/map" element={user ? <MapPage /> : <Navigate to="/" replace />} />
         <Route path="/profile" element={user ? <ProfilePage /> : <Navigate to="/" replace />} />
+        <Route path="/feed" element={user ? <FeedPage /> : <Navigate to="/" replace />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
