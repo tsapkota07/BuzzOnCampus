@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useLocation, useNavigate, Navigate } from 'react-router-dom'
+import { httpsCallable } from 'firebase/functions'
+import { functions } from '../api/firebase'
 import { useAuthStore } from '../store/useAuthStore'
 import SignupForm from '../components/auth/SignupForm'
 import LoginForm from '../components/auth/LoginForm'
