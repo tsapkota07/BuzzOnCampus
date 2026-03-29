@@ -1,15 +1,27 @@
 import { useRef, useState } from 'react'
+import type * as GeoJSON from 'geojson'
 import Map, { Marker, Layer } from 'react-map-gl'
 import type { MapRef } from 'react-map-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import AvatarMarker from './AvatarMarker'
-import PlaceMarker from './PlaceMarker'
 import Navbar from '../ui/Navbar'
 import { useMapStore } from '../../store/useMapStore'
-import { mockUserPins, mockPlaces } from '../../data/mockPins'
+import { mockUserPins } from '../../data/mockPins'
 
 interface MapViewProps {
   onMapClick?: (lat: number, lng: number) => void
+}
+
+function mapboxCategoryToOurs(category: string): string {
+  const c = category.toLowerCase()
+  if (c.includes('restaurant') || c.includes('food') || c.includes('dining')) return 'restaurant'
+  if (c.includes('cafe') || c.includes('coffee')) return 'cafe'
+  if (c.includes('bar') || c.includes('pub') || c.includes('nightlife')) return 'bar'
+  if (c.includes('gym') || c.includes('fitness') || c.includes('recreation')) return 'gym'
+  if (c.includes('library')) return 'library'
+  if (c.includes('university') || c.includes('college') || c.includes('school')) return 'university'
+  if (c.includes('shop') || c.includes('store') || c.includes('retail')) return 'retail'
+  return 'general'
 }
 
 export default function MapView({ onMapClick }: MapViewProps) {
@@ -18,7 +30,6 @@ export default function MapView({ onMapClick }: MapViewProps) {
   const { activeFilters, setSelectedPin, setSelectedPlace } = useMapStore()
 
   const visibleUserPins = mockUserPins.filter(p => activeFilters.includes(p.type))
-  const visiblePlaces   = mockPlaces.filter(() => activeFilters.includes('places'))
 
   const zoomIn  = () => mapRef.current?.zoomIn({ duration: 300 })
   const zoomOut = () => mapRef.current?.zoomOut({ duration: 300 })
@@ -95,7 +106,46 @@ export default function MapView({ onMapClick }: MapViewProps) {
           bearing: 0,
         }}
         mapStyle="mapbox://styles/mapbox/dark-v11"
-        onClick={e => onMapClick?.(e.lngLat.lat, e.lngLat.lng)}
+        onClick={e => {
+          const map = mapRef.current?.getMap()
+          if (!map) return
+
+          const features = map.queryRenderedFeatures(e.point, { layers: ['poi-label'] })
+
+          if (features.length === 0) {
+            onMapClick?.(e.lngLat.lat, e.lngLat.lng)
+            return
+          }
+
+          const feature = features[0]
+          const placeName = feature.properties?.name ?? 'Unknown Place'
+          const rawCategory = feature.properties?.category_en ?? feature.properties?.type ?? 'general'
+          const category = mapboxCategoryToOurs(rawCategory)
+          const coords = (feature.geometry as GeoJSON.Point).coordinates
+          const [lng, lat] = coords
+
+          // TODO: Replace with POST /places/find-or-create with { name, category, lat, lng, university_id }
+          const mockPlace = {
+            id: String(feature.id ?? placeName),
+            name: placeName,
+            category,
+            lat,
+            lng,
+            posts: [],
+          }
+
+          setSelectedPlace(mockPlace)
+        }}
+        onLoad={() => {
+          const map = mapRef.current?.getMap()
+          if (!map) return
+          map.on('mouseenter', 'poi-label', () => {
+            map.getCanvas().style.cursor = 'pointer'
+          })
+          map.on('mouseleave', 'poi-label', () => {
+            map.getCanvas().style.cursor = ''
+          })
+        }}
       >
         {visibleUserPins.map(pin => (
           <Marker key={pin.id} latitude={pin.lat} longitude={pin.lng} anchor="bottom">
@@ -103,16 +153,6 @@ export default function MapView({ onMapClick }: MapViewProps) {
               userColor={pin.userColor}
               type={pin.type}
               onClick={() => setSelectedPin(pin)}
-            />
-          </Marker>
-        ))}
-
-        {visiblePlaces.map(place => (
-          <Marker key={place.id} latitude={place.lat} longitude={place.lng} anchor="bottom">
-            <PlaceMarker
-              category={place.category}
-              name={place.name}
-              onClick={() => setSelectedPlace(place)}
             />
           </Marker>
         ))}

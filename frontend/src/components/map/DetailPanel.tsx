@@ -212,11 +212,16 @@ export default function DetailPanel() {
           </div>
 
           {/* Posts list — scrollable */}
+          {/* TODO: Replace with GET /places/{id}/posts */}
           <div className="flex-1 overflow-y-auto p-6 pb-24">
             {selectedPlace.posts.length === 0 ? (
-              <p className="text-center text-sm mt-8" style={{ color: '#888' }}>
-                No posts yet. Be the first to post here!
-              </p>
+              <div className="flex flex-col items-center justify-center h-full mt-8 gap-3">
+                <span style={{ fontSize: 48 }}>📭</span>
+                <p className="font-bold text-white text-base">No buzz here yet</p>
+                <p className="text-sm text-center" style={{ color: '#888' }}>
+                  Be the first to post something!
+                </p>
+              </div>
             ) : (
               selectedPlace.posts.map(post => (
                 <PostCard key={post.id} post={post} />
