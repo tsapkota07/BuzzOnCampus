@@ -31,6 +31,8 @@ export interface MockUserPin {
   buzzReward: number
   participantCount: number
   createdAt: string
+  eventDate: string | null
+  volunteerHours: number | null
 }
 
 export interface MockPlace {

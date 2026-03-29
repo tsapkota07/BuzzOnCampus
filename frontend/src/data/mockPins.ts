@@ -14,6 +14,8 @@ export const mockUserPins: MockUserPin[] = [
     buzzReward: 10,
     participantCount: 4,
     createdAt: '2 hours ago',
+    eventDate: null,
+    volunteerHours: null,
   },
   {
     id: '2',
@@ -27,6 +29,8 @@ export const mockUserPins: MockUserPin[] = [
     buzzReward: 20,
     participantCount: 7,
     createdAt: '30 minutes ago',
+    eventDate: null,
+    volunteerHours: 2,
   },
   {
     id: '3',
@@ -40,6 +44,8 @@ export const mockUserPins: MockUserPin[] = [
     buzzReward: 15,
     participantCount: 2,
     createdAt: '1 hour ago',
+    eventDate: null,
+    volunteerHours: 2,
   },
   {
     id: '4',
@@ -53,6 +59,8 @@ export const mockUserPins: MockUserPin[] = [
     buzzReward: 5,
     participantCount: 0,
     createdAt: '10 minutes ago',
+    eventDate: null,
+    volunteerHours: null,
   },
   {
     id: '5',
@@ -66,6 +74,8 @@ export const mockUserPins: MockUserPin[] = [
     buzzReward: 8,
     participantCount: 11,
     createdAt: '3 hours ago',
+    eventDate: null,
+    volunteerHours: null,
   },
 ]
 
