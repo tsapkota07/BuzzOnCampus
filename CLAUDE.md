@@ -1,6 +1,6 @@
 # BuzzOnCampus — Root CLAUDE.md
 # Read by everyone. Updated as the project evolves.
-# Last updated: map fully built — live pins, side panel, pin creation form, placement mode, real-time Firestore sync, geofence (5-mile campus radius, enforced client + server).
+# Last updated: FeedPage built (/feed), Navbar "Settings" → "Feed", seed data + admin system planned (plan.md Phase 11.5–14), 3D model pins + geofence-in-3D planned (Phase 15–16).
 
 ## Project
 BuzzOnCampus — live 3D campus map platform built at Kent State Hackathon, March 28–29 (18–20 hrs).
@@ -68,7 +68,8 @@ Update these checkboxes as things get built. This is how Claude knows what exist
 - [ ] Buzz Points transfer confirmed working end-to-end
 
 ### Feed & Polish
-- [ ] `PinFeed.tsx` built (campus activity feed / list view — Phase 9, deferred)
+- [x] `FeedPage.tsx` built — list view of live pins + places, filter chips, pin detail + place detail views, at `/feed`
+- [x] Navbar avatar dropdown: "Settings" replaced with "Feed" → navigates to `/feed`
 - [ ] `UserProfile.tsx` built
 - [x] `LandingPage.tsx` built — university selector, photo slideshow, navigates to `/auth`
 - [x] `NotFoundPage.tsx` built — custom 404 with Go Back / Back to Home
@@ -77,7 +78,8 @@ Update these checkboxes as things get built. This is how Claude knows what exist
 ### Deployment
 - [x] Cloud Functions deployed (`firebase deploy --only functions`)
 - [x] Frontend built and deployed — live at https://buzzoncampus-f9257.web.app
-- [ ] Seed data loaded into production Firestore
+- [ ] Seed data loaded into production Firestore (plan in `frontend/plan.md` Phase 11.5 — script: `scripts/seed_demo_data.mjs`)
+- [ ] Dev admin accounts created (`dev@ysu.edu`, `dev@kent.edu`, `dev@osu.edu`, `dev@gmail.com`) — extend `scripts/seed_test_users.mjs`
 - [ ] Full demo rehearsed
 
 ---
@@ -140,23 +142,28 @@ users/{uid}
   username: string              # display name, collected at signup
   university_id: string
   buzz_balance: number          # starts at 20, managed by Cloud Functions
+  volunteer_hours_total: number # incremented by approveVolunteerHours Cloud Function only
   color: string                 # hex e.g. '#14B8A6'
   avatar_url: string | null
+  is_dev: boolean               # true for dev/seed accounts — Cloud Functions block these from approving real users
   created_at: Timestamp
 
 pins/{pinId}
   user_id: string
   user_color: string            # copied from user at pin creation time
+  avatar_model: string          # glb file path e.g. '/glb files/Alien.glb' — drives 3D marker on map
   type: 'event'|'volunteer'|'help'|'business'
   title: string
   description: string
   buzz_reward: number
+  volunteer_hours: number|null  # volunteer pins only, 1–12; null for all other types
   lat: number
   lng: number
   status: 'active'|'completed'|'cancelled'
   university_id: string
   event_date: Timestamp | null
   participant_count: number     # incremented by joinPin()
+  is_seed: boolean              # true for demo seed pins — filtered out for non-dev users
   created_at: Timestamp
 
 participations/{participationId}
@@ -164,6 +171,18 @@ participations/{participationId}
   user_id: string
   status: 'joined'|'completed'
   joined_at: Timestamp
+  volunteer_hours: number|null  # copied from pin at completion time
+  hours_status: 'pending'|'approved'|'disputed'|'rejected'|null  # null for non-volunteer
+  dispute_reason: string|null
+  dispute_count: number         # max 1 dispute allowed
+  reviewed_by: string|null      # uid of admin who last acted
+  reviewed_at: Timestamp|null
+
+admins/{uid}
+  university_id: string         # 'kent'|'ysu'|'osu'|'general'
+  email: string
+  is_dev: boolean
+  created_at: Timestamp
 
 transactions/{transactionId}
   from_user_id: string          # 'system' if awarded (not deducted)
@@ -198,12 +217,13 @@ businesses/{businessId}
 ## Cloud Functions Reference
 Tirsan owns these. Sumaiya calls them via `httpsCallable`. Shafi does not call them directly.
 
-| Function | Type | Trigger | What it does |
-|----------|------|---------|-------------|
-| `validateEduEmail` | Auth trigger | Before user created | Blocks non-.edu registration |
-| `onUserCreated` | Firestore trigger | On `users/{uid}` create | Sets `buzz_balance` to 20 |
-| `completePin` | Callable | Called by frontend | Atomic Buzz transfer + sets pin status to 'completed' |
-| `getFeed` | Callable | Called by frontend | Returns 30 most recent active pins for a university |
+| Function | Type | Trigger | What it does | Status |
+|----------|------|---------|-------------|--------|
+| `validateEduEmail` | Auth trigger | Before user created | Blocks non-.edu registration | ✅ deployed |
+| `onUserCreated` | Firestore trigger | On `users/{uid}` create | Sets `buzz_balance` to 20 | ⚠️ not confirmed live |
+| `completePin` | Callable | Called by frontend | Atomic Buzz transfer + sets pin status to 'completed' | ✅ deployed, untested |
+| `getFeed` | Callable | Called by frontend | Returns 30 most recent active pins for a university | ✅ deployed |
+| `approveVolunteerHours` | Callable | Called by AdminPage | Approve/reject pending volunteer hours, increment user total | 📋 planned (Phase 14) |
 
 **Calling a function from frontend:**
 ```ts

@@ -1,0 +1,10 @@
+- to implement feed alongside profile so we can see a list view of all events. 
+- to implement a section where you can view your past events and upcoming events. 
+
+- to make sure that, if we added a volunteer event, we are able to add volunteer hours as well. 
+- someone (an admin, which we will create for each edu + a general) should be able to approve all volunteer hours. 
+- volunteer hours can be disputed or approved. 
+
+- border should also appear in 3d model as well. 
+- to test the 3d models and see if we can implement it as pins. models are big so need to be
+    adjusted somehow. 

@@ -1,6 +1,6 @@
 # Frontend CLAUDE.md — Shafi's Zone
 # Primary owner: Shafi | Read root CLAUDE.md first.
-# Last updated: map fully built — live pins, DetailPanel with inline CreatePinForm, placement mode (Phase 8), geofence overlay + enforcement (Phase 10), real-time Firestore sync.
+# Last updated: FeedPage built (/feed), Navbar "Settings" → "Feed", phases 11.5–16 planned in plan.md (seed data, admin system, volunteer hours, 3D model pins, geofence-in-3D).
 
 ## What You Own
 Everything in `frontend/` EXCEPT these (Sumaiya's):
@@ -22,16 +22,23 @@ Update these as you build. Claude reads this to know what exists.
 - [x] `src/store/useMapStore.ts` — full store: livePins, selectedPin, selectedPlace, createPinContext, pinPlacementMode, hoveredPlace, HoveredPlace type
 - [x] `src/store/useBuzzStore.ts` — scaffolded
 - [x] `src/components/map/MapView.tsx` — live pins, GPS dot, auto-center, placement mode, geofence overlay, out-of-bounds toast
-- [x] `src/components/map/AvatarMarker.tsx` — 3D rotating avatar marker
+- [x] `src/components/map/AvatarMarker.tsx` — 3D rotating avatar marker (red.glb for all types — Phase 16 will add per-type models)
 - [x] `src/components/map/DetailPanel.tsx` — pin detail, place detail, inline CreatePinForm (2-step), placement mode preview views
-- [x] `src/components/ui/Navbar.tsx` — filter toggles (event/volunteer/help/places)
-- [x] `src/api/pins.ts` — `createPin()`, `subscribeToPins()` (Firestore onSnapshot)
+- [x] `src/components/ui/Navbar.tsx` — filter toggles (event/volunteer/help/places), avatar dropdown with Profile + Feed + Log Out
+- [x] `src/api/pins.ts` — `createPin()`, `subscribeToPins()` (Firestore onSnapshot), `FirestorePin` + `CreatePinInput` types
 - [x] `src/utils/universityCoords.ts` — coords + 5-mile radiusM per university, `isWithinCampus()`, `isRestrictedAccount()`
 - [x] `src/pages/LandingPage.tsx` — university selector + photo slideshow, passes signup data via router state to AuthPage
 - [x] `src/pages/NotFoundPage.tsx` — custom 404 with Go Back / Back to Home
 - [x] `src/pages/MapPage.tsx` — mounts MapView + DetailPanel, "Drop a Buzz" button, ESC cancels placement mode
-- [ ] `src/components/map/PinMarker.tsx` — distinct per-type markers (using AvatarMarker for now)
-- [ ] `src/pages/ListPage.tsx` — upcoming events / feed list view (Phase 9, deferred)
+- [x] `src/pages/FeedPage.tsx` — live pin list + places, filter chips, pin detail view, place detail view, at `/feed`
+- [x] `src/pages/ProfilePage.tsx` — user banner, stats (buzz balance, pins posted, vol. hours), avatar color display
+- [ ] `src/pages/AdminPage.tsx` — pending volunteer hour approvals (Phase 14)
+- [ ] `src/api/participations.ts` — getUserParticipations(), getPin() (Phase 12)
+- [ ] `src/api/admin.ts` — isAdmin(), getPendingHoursRequests() (Phase 14)
+- [ ] Past/upcoming events sections in ProfilePage (Phase 12)
+- [ ] Volunteer hours field in CreatePinForm (Phase 13)
+- [ ] Geofence boundary line visible in 3D mode (Phase 15)
+- [ ] Per-type 3D model pins with WebGL context guard (Phase 16)
 
 ## Getting Started
 ```bash
@@ -141,32 +148,19 @@ const PIN_COLORS: Record<PinType, string> = {
 }
 ```
 
-## PinDetailSidebar.tsx — what you build vs what Sumaiya wires
-You build: the shell, layout, title/description/type/buzz_reward display, and placeholder join/accept button.
-Sumaiya wires: the `onClick` handlers on those buttons to call `joinPin()` / `completePinFn()`.
-The handoff prop: pass `pin` as a prop, Sumaiya will import and use the component.
+## Coordination Notes
 
-## One Coordination Point with Sumaiya
-`PostPinModal` (Sumaiya's) needs to know where the user clicked on the map.
-Expose this on MapView:
-```ts
-// MapView.tsx props
-interface MapViewProps {
-  onMapClick?: (lat: number, lng: number) => void
-}
-// Inside: <Map onClick={e => onMapClick?.(e.lngLat.lat, e.lngLat.lng)} ...>
-```
-Tell Sumaiya when this prop is live.
+**PostPinModal is deleted** — pin creation is now inline in `DetailPanel.tsx` as `CreatePinForm`.
+No Sumaiya handoff needed for pin creation.
+
+**Join button** in `DetailPanel` pin detail view exists but `joinPin()` Cloud Function is not yet
+wired — placeholder only. Tirsan needs to deploy the function first.
 
 ## Updating App.tsx (shared file — minimal edits only)
-When your pages are ready, uncomment and add your routes:
-```ts
-import LandingPage from './pages/LandingPage'
-import MapPage from './pages/MapPage'
-// Add: <Route path="/" element={<LandingPage />} />
-// Add: <Route path="/map" element={user ? <MapPage /> : <Navigate to="/auth" />} />
-```
-Do not reformat Sumaiya's routes.
+Current routes: `/` → LandingPage, `/auth` → AuthPage, `/map` → MapPage, `/profile` → ProfilePage,
+`/feed` → FeedPage, `*` → NotFoundPage.
+When adding new pages, follow the same guarded pattern: `user ? <Page /> : <Navigate to="/" replace />`.
+Do not reformat existing routes.
 
 ## Do Not
 - Do not write to `src/api/` — import from it
