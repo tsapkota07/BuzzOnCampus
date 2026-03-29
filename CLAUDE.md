@@ -1,6 +1,16 @@
 # BuzzOnCampus — Root CLAUDE.md
 # Read by everyone. Updated as the project evolves.
-# Last updated: FeedPage built (/feed), Navbar "Settings" → "Feed", seed data + admin system planned (plan.md Phase 11.5–14), 3D model pins + geofence-in-3D planned (Phase 15–16).
+# Last updated: 2026-03-29. Phases 1–15 + Phase 11 security fixes complete. All deployed to
+#   https://buzzoncampus-f9257.web.app. 79 frontend tests passing. Everything is stable.
+#
+# ⚠️  NEXT SESSION — START HERE (Tirsan):
+#   The next thing to work on is Phase 13C: update the `completePin` Cloud Function
+#   (functions/src/pins/completePin.ts) to copy `volunteer_hours` from the pin into the
+#   participation doc with `hours_status: 'pending'` when the pin type is 'volunteer'.
+#   Without this, volunteer hours are stored on the pin but never land in participations,
+#   so the admin approval flow (Phase 14) has nothing to approve.
+#   After 13C, the next priority is Phase 11.5B–C: write scripts/seed_demo_data.py
+#   to populate demo pins + participations so the app doesn't look empty at demo time.
 
 ## Project
 BuzzOnCampus — live 3D campus map platform built at Kent State Hackathon, March 28–29 (18–20 hrs).
@@ -26,7 +36,7 @@ Update these checkboxes as things get built. This is how Claude knows what exist
 - [x] Cloud Functions scaffolded and deployed (sendOtp, verifyOtp, completePin, getFeed, validateEduEmail)
 - [x] Firebase project created — project ID: `buzzoncampus-f9257`
 - [x] `.firebaserc` updated with real project ID
-- [ ] `frontend/.env` created with Mapbox token (Firebase config already hardcoded in `firebase.ts`)
+- [x] `frontend/.env` created with Mapbox token (Firebase config already hardcoded in `firebase.ts`)
 
 ### Auth
 - [x] `SignupForm.tsx` built — sends OTP via `sendOtp` Cloud Function before account creation
@@ -70,16 +80,39 @@ Update these checkboxes as things get built. This is how Claude knows what exist
 ### Feed & Polish
 - [x] `FeedPage.tsx` built — list view of live pins + places, filter chips, pin detail + place detail views, at `/feed`
 - [x] Navbar avatar dropdown: "Settings" replaced with "Feed" → navigates to `/feed`
-- [ ] `UserProfile.tsx` built
+- [x] `ProfilePage.tsx` — user banner, stats (buzz balance, real pins posted count, vol. hours total), past/upcoming pins sections
 - [x] `LandingPage.tsx` built — university selector, photo slideshow, navigates to `/auth`
 - [x] `NotFoundPage.tsx` built — custom 404 with Go Back / Back to Home
 - [x] `Navbar.tsx` built with filter toggles
 
+### Admin System
+- [x] `api/admin.ts` — `getAdminInfo()`, `getPendingHoursRequests()` (scoped by university), `callApproveVolunteerHours()`
+- [x] `AdminPage.tsx` — pending requests list, approve/reject buttons, scope badge (🛡️ scoped vs ⭐ super-admin), university tag per card
+- [x] Admin route `/admin` added to App.tsx — visible to all logged-in users; AdminPage handles access check internally
+- [x] "Admin" link added to Navbar avatar dropdown
+- [x] `approveVolunteerHours` Cloud Function deployed — enforces university scope server-side; `general` bypasses filter
+- [x] Admin accounts seeded via `scripts/seed_admins.py` (runs with Python venv + ADC):
+      - `admin@ysu.edu` / `adminPassword` — YSU scope
+      - `admin@kent.edu` / `adminPassword` — Kent scope
+      - `admin@osu.edu` / `adminPassword` — OSU scope
+      - `admin@gmail.com` / `adminPassword` — super-admin (all universities)
+
+### Volunteer Hours
+- [x] `volunteer_hours: number | null` added to `FirestorePin` and `CreatePinInput` in `api/pins.ts`
+- [x] Volunteer hours input in `CreatePinForm` (DetailPanel) — wired to `createPin()` submit
+- [ ] `completePin` Cloud Function — copy `volunteer_hours` from pin into participation doc with `hours_status: 'pending'` (Phase 13C — Tirsan)
+- [ ] Dispute flow for users — "Dispute" button on rejected participations in ProfilePage (Phase 14E)
+
+### Tests
+- [x] `frontend/src/__tests__/routeGuard.test.tsx` — 40 tests: all 4 protected routes, all public routes, loading gate, 404, store poisoning, logout mid-nav, university_id spoofing, cross-university consistency, redirect destination
+- [x] `frontend/src/__tests__/auth.test.ts` — 47 tests: store edge cases, adversarial email inputs (suffix collision, URL-encoding, null-byte, multiple @), geofence `isWithinCampus` boundary cases, known gaps documented
+
 ### Deployment
-- [x] Cloud Functions deployed (`firebase deploy --only functions`)
-- [x] Frontend built and deployed — live at https://buzzoncampus-f9257.web.app
-- [ ] Seed data loaded into production Firestore (plan in `frontend/plan.md` Phase 11.5 — script: `scripts/seed_demo_data.mjs`)
-- [ ] Dev admin accounts created (`dev@ysu.edu`, `dev@kent.edu`, `dev@osu.edu`, `dev@gmail.com`) — extend `scripts/seed_test_users.mjs`
+- [x] Full `firebase deploy` run 2026-03-29 — hosting, functions, firestore all in sync
+- [x] All 6 Cloud Functions live: `sendOtp`, `verifyOtp`, `onUserCreated`, `completePin`, `getFeed`, `approveVolunteerHours`
+- [x] Firestore rules deployed — Phase 11 security fixes live (university_id spoof patch, admins rule, universities auth)
+- [x] Frontend live at https://buzzoncampus-f9257.web.app (build from 2026-03-29)
+- [ ] Seed demo pins loaded into Firestore (Phase 11.5B–C — `scripts/seed_demo_data.py`, not yet written)
 - [ ] Full demo rehearsed
 
 ---
@@ -219,11 +252,11 @@ Tirsan owns these. Sumaiya calls them via `httpsCallable`. Shafi does not call t
 
 | Function | Type | Trigger | What it does | Status |
 |----------|------|---------|-------------|--------|
-| `validateEduEmail` | Auth trigger | Before user created | Blocks non-.edu registration | ✅ deployed |
+| `validateEduEmail` | Auth trigger | Before user created | Blocks non-.edu registration | ✅ deployed (disabled — OTP covers it) |
 | `onUserCreated` | Firestore trigger | On `users/{uid}` create | Sets `buzz_balance` to 20 | ⚠️ not confirmed live |
-| `completePin` | Callable | Called by frontend | Atomic Buzz transfer + sets pin status to 'completed' | ✅ deployed, untested |
+| `completePin` | Callable | Called by frontend | Atomic Buzz transfer + sets pin status to 'completed' | ✅ deployed — ⚠️ does NOT yet write participation doc with `volunteer_hours` + `hours_status: 'pending'` — **Phase 13C is the next task** |
 | `getFeed` | Callable | Called by frontend | Returns 30 most recent active pins for a university | ✅ deployed |
-| `approveVolunteerHours` | Callable | Called by AdminPage | Approve/reject pending volunteer hours, increment user total | 📋 planned (Phase 14) |
+| `approveVolunteerHours` | Callable | Called by AdminPage | Approve/reject pending volunteer hours; enforces university scope; increments `volunteer_hours_total` on approve | ✅ deployed |
 
 **Calling a function from frontend:**
 ```ts
@@ -281,17 +314,18 @@ const unsub = onSnapshot(q, snapshot => {
 - `sumaiya` — Sumaiya's branch
 - `main` — merge here only when a full feature is tested end-to-end
 
-## Known Security Issues (Phase 11 — fix before launch)
-| Severity | Issue | Fix |
-|----------|-------|-----|
-| CRITICAL | Firestore rule trusts `university_id` from pin payload — attacker sets `university_id:'other'` in auth store from console, bypasses geofence | Rule must read user doc: `get(.../users/$(request.auth.uid)).data.university_id` |
-| CRITICAL | No input length limits — title/desc can be huge, rendered without sanitization (XSS) | Max title=100, desc=500 in `CreatePinForm` handleSubmit |
-| CRITICAL | `buzzCost` has no max — HTML min=1 bypassable via DevTools | Validate 1–1000 before `createPin()` call |
-| HIGH | `createPin()` in pins.ts has no auth check — relies solely on Firestore rules | Add `getAuth().currentUser` guard at top of function |
-| HIGH | If `lockedPlace` is null, pin coords default to `mapCenter` which can change (race) | Require `lockedPlace` set before submit |
-| MEDIUM | Pins store `user_id` not `username` — deleted accounts show UID | Cache `username` into pin doc at creation time |
-| LOW | No rate limiting on pin creation | Cloud Function rate limit (Tirsan) |
-| LOW | `universities` collection is world-readable | Restrict to `request.auth != null` |
+## Known Security Issues (Phase 11 — ✅ fixed)
+| Severity | Issue | Status |
+|----------|-------|--------|
+| CRITICAL | Firestore rule trusted `university_id` from pin payload — geofence bypass | ✅ Fixed — rule reads from user doc via `get()` |
+| CRITICAL | No input length limits — XSS / oversized payloads | ✅ Fixed — title ≤ 100, desc ≤ 500 in `CreatePinForm` |
+| CRITICAL | `buzzCost` had no max — bypassable via DevTools | ✅ Fixed — validated 1–1000 in `handleSubmit` |
+| HIGH | `createPin()` had no auth check | ✅ Fixed — `getAuth().currentUser` guard in `pins.ts` |
+| HIGH | Pin coords could silently default to 0,0 if both lockedPlace and mapCenter were null | ✅ Fixed — `handleSubmit` rejects if no valid location |
+| MEDIUM | Pins stored `user_id` not `username` — deleted accounts showed UID | ✅ Fixed — `username` cached into pin doc at creation time |
+| LOW | No rate limiting on pin creation | ⏳ Post-hackathon — Cloud Function rate limit |
+| LOW | `universities` collection was world-readable | ✅ Fixed — restricted to `request.auth != null` |
+| BONUS | `admins` collection had no Firestore rule — `getAdminInfo()` silently failed | ✅ Fixed — added `allow read: if auth.uid == userId` |
 
 ## Do Not Build
 - Rating/reputation system, Leaderboard, In-app chat

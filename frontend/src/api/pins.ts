@@ -6,6 +6,7 @@ import {
   onSnapshot,
   serverTimestamp,
 } from 'firebase/firestore'
+import { getAuth } from 'firebase/auth'
 import { db } from './firebase'
 
 // ─── Pin shape as stored in Firestore ────────────────────────────────────────
@@ -16,12 +17,14 @@ import { db } from './firebase'
 export interface FirestorePin {
   id: string
   user_id: string
+  username: string            // display name — cached at pin creation time
   user_color: string
   avatar_model: string        // glb file path — drives which 3D model renders on map
   type: 'event' | 'volunteer' | 'help'
   title: string
   description: string
   buzz_reward: number
+  volunteer_hours: number | null  // volunteer pins only
   lat: number
   lng: number
   status: 'active' | 'completed' | 'cancelled'
@@ -34,12 +37,14 @@ export interface FirestorePin {
 // ─── Input for creating a new pin ────────────────────────────────────────────
 export interface CreatePinInput {
   user_id: string
+  username: string            // pass (user as any).username ?? user.email
   user_color: string
   avatar_model: string        // pass user.avatar_url ?? '/models/red.glb'
   type: 'event' | 'volunteer' | 'help'
   title: string
   description: string
   buzz_reward: number
+  volunteer_hours: number | null  // volunteer pins only; null for all other types
   lat: number
   lng: number
   university_id: string
@@ -48,6 +53,9 @@ export interface CreatePinInput {
 
 // ─── Write a new pin to Firestore ────────────────────────────────────────────
 export async function createPin(input: CreatePinInput): Promise<string> {
+  // Phase 11 — HIGH: auth guard before any Firestore write
+  if (!getAuth().currentUser) throw new Error('Not authenticated')
+
   const ref = await addDoc(collection(db, 'pins'), {
     ...input,
     status: 'active',

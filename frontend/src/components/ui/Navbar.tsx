@@ -179,6 +179,13 @@ export default function Navbar() {
                   </button>
                   <div style={{ height: 1, background: 'rgba(255,255,255,0.07)' }} />
                   <button
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-white hover:bg-white/10 transition-colors"
+                    onClick={() => { setDropdownOpen(false); navigate('/admin') }}
+                  >
+                    <span>🛡️</span> Admin
+                  </button>
+                  <div style={{ height: 1, background: 'rgba(255,255,255,0.07)' }} />
+                  <button
                     className="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold hover:bg-white/10 transition-colors"
                     style={{ color: '#ff5555' }}
                     onClick={() => { setDropdownOpen(false); setLogoutModalOpen(true) }}

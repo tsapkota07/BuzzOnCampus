@@ -167,30 +167,56 @@ function CreatePinForm() {
     if (!user) { setPostError('Not logged in'); return }
     if (!selectedType) return
 
+    // Phase 11 — CRITICAL: input length limits (XSS / oversized payloads)
+    const trimmedTitle = title.trim().slice(0, 100)
+    const trimmedDesc = description.trim().slice(0, 500)
+    if (!trimmedTitle) { setPostError('Title is required'); return }
+
+    // Phase 11 — CRITICAL: buzzCost must be 0 or within 1–1000
+    const buzzNum = buzzCost ? Number(buzzCost) : 0
+    if (buzzCost && (isNaN(buzzNum) || buzzNum < 1 || buzzNum > 1000)) {
+      setPostError('Buzz Points must be between 1 and 1000')
+      return
+    }
+
+    // Phase 11 — HIGH: volunteer hours must be 1–12
+    const hoursNum = hours ? Number(hours) : null
+    if (selectedType === 'volunteer' && hoursNum !== null && (isNaN(hoursNum) || hoursNum < 1 || hoursNum > 12)) {
+      setPostError('Volunteer hours must be between 1 and 12')
+      return
+    }
+
+    // Phase 11 — HIGH: require a valid location — never silently default to 0,0
+    const lat = lockedPlace?.lat ?? createPinContext?.mapCenter?.lat
+    const lng = lockedPlace?.lng ?? createPinContext?.mapCenter?.lng
+    if (lat === undefined || lng === undefined) {
+      setPostError('No location set — please re-open the form from the map')
+      return
+    }
+
     const event_date = eventDate
       ? eventTime ? `${eventDate}T${eventTime}` : eventDate
       : null
-
-    const lat = lockedPlace?.lat ?? createPinContext?.mapCenter?.lat ?? 41.1006
-    const lng = lockedPlace?.lng ?? createPinContext?.mapCenter?.lng ?? -80.6481
 
     setIsPosting(true)
     setPostError(null)
     try {
       await createPin({
         user_id: user.uid,
+        // Phase 11 — MEDIUM: cache username in pin doc so deleted accounts don't show UID
+        username: (user as any).username ?? user.email ?? user.uid,
         user_color: user.color,
         avatar_model: user.avatar_url ?? '/models/red.glb',
         type: selectedType as 'event' | 'volunteer' | 'help',
-        title: title.trim(),
-        description: description.trim(),
-        buzz_reward: buzzCost ? Number(buzzCost) : 0,
+        title: trimmedTitle,
+        description: trimmedDesc,
+        buzz_reward: buzzNum,
+        volunteer_hours: selectedType === 'volunteer' ? (hoursNum ?? null) : null,
         lat,
         lng,
         university_id: user.university_id,
         event_date,
       })
-      // Pin will appear on map automatically via onSnapshot
       setCreatePinContext(null)
     } catch (err) {
       console.error('Failed to post pin:', err)
@@ -303,19 +329,35 @@ function CreatePinForm() {
           )}
 
           <div className="flex flex-col gap-3 mb-4">
-            <input
-              style={inputStyle}
-              type="text"
-              placeholder="Give it a title..."
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-            />
-            <textarea
-              style={{ ...inputStyle, resize: 'none', minHeight: 72 }}
-              placeholder="What's happening..."
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-            />
+            <div>
+              <input
+                style={inputStyle}
+                type="text"
+                placeholder="Give it a title..."
+                maxLength={100}
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+              />
+              {title.length > 80 && (
+                <p style={{ fontSize: 10, color: title.length >= 100 ? '#f87171' : '#888', textAlign: 'right', margin: '2px 0 0' }}>
+                  {title.length}/100
+                </p>
+              )}
+            </div>
+            <div>
+              <textarea
+                style={{ ...inputStyle, resize: 'none', minHeight: 72 }}
+                placeholder="What's happening..."
+                maxLength={500}
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+              />
+              {description.length > 400 && (
+                <p style={{ fontSize: 10, color: description.length >= 500 ? '#f87171' : '#888', textAlign: 'right', margin: '2px 0 0' }}>
+                  {description.length}/500
+                </p>
+              )}
+            </div>
             {(selectedType === 'event' || selectedType === 'volunteer') && (
               <div className="flex gap-2">
                 <input style={{ ...inputStyle, flex: 1 }} type="date" value={eventDate} onChange={e => setEventDate(e.target.value)} />
