@@ -8,6 +8,12 @@ import { useAuthStore } from '../../store/useAuthStore'
 import { isRestrictedAccount, isWithinCampus } from '../../utils/universityCoords'
 import { getAdminInfo } from '../../api/admin'
 
+const PIN_MODEL: Record<string, string> = {
+  volunteer: '/red.glb',
+  event:     '/Alien.glb',
+  help:      '/Caveman.glb',
+}
+
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const PIN_COLORS: Record<string, string> = {
@@ -207,7 +213,7 @@ function CreatePinForm() {
         // Phase 11 — MEDIUM: cache username in pin doc so deleted accounts don't show UID
         username: (user as any).username ?? user.email ?? user.uid,
         user_color: user.color,
-        avatar_model: user.avatar_url ?? '/models/red.glb',
+        avatar_model: PIN_MODEL[selectedType] ?? '/red.glb',
         type: selectedType as 'event' | 'volunteer' | 'help',
         title: trimmedTitle,
         description: trimmedDesc,

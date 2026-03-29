@@ -65,6 +65,13 @@ function buildCircleLineGeoJSON(lat: number, lng: number, radiusM: number): GeoJ
   }
 }
 
+// 3D model per pin type — swap these out as more models are assigned
+const PIN_MODEL: Record<string, string> = {
+  volunteer: '/red.glb',
+  event:     '/Alien.glb',
+  help:      '/Caveman.glb',
+}
+
 /** Spread pins that are within ~20 m of each other into a small circle so
  *  each one is individually visible and clickable on the map. */
 function spreadOverlappingPins(pins: MockUserPin[]): Array<MockUserPin & { renderLat: number; renderLng: number }> {
@@ -502,6 +509,7 @@ export default function MapView({ onMapClick, onMapReady }: MapViewProps) {
             <AvatarMarker
               userColor={pin.userColor}
               type={pin.type}
+              modelPath={PIN_MODEL[pin.type] ?? '/red.glb'}
               onClick={() => setSelectedPin(pin)}
             />
           </Marker>
