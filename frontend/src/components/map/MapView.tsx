@@ -45,6 +45,26 @@ function buildGeofenceGeoJSON(lat: number, lng: number, radiusM: number): GeoJSO
   }
 }
 
+/** Builds a GeoJSON LineString tracing just the campus circle boundary.
+ *  Used to show the geofence border in 3D mode. */
+function buildCircleLineGeoJSON(lat: number, lng: number, radiusM: number): GeoJSON.Feature<GeoJSON.LineString> {
+  const POINTS = 64
+  const earthR = 6371000
+  const angularR = radiusM / earthR
+  const coords: [number, number][] = []
+  for (let i = 0; i <= POINTS; i++) {
+    const angle = (i / POINTS) * 2 * Math.PI
+    const dLat = angularR * Math.cos(angle)
+    const dLng = angularR * Math.sin(angle) / Math.cos(lat * Math.PI / 180)
+    coords.push([lng + dLng * (180 / Math.PI), lat + dLat * (180 / Math.PI)])
+  }
+  return {
+    type: 'Feature',
+    properties: {},
+    geometry: { type: 'LineString', coordinates: coords },
+  }
+}
+
 function mapboxCategoryToOurs(category: string): string {
   const c = category.toLowerCase()
   if (c.includes('restaurant') || c.includes('food') || c.includes('dining')) return 'restaurant'
@@ -79,6 +99,11 @@ export default function MapView({ onMapClick, onMapReady }: MapViewProps) {
   const geofenceGeoJSON = useMemo(() => {
     if (!restricted) return null
     return buildGeofenceGeoJSON(universityCoords.lat, universityCoords.lng, universityCoords.radiusM)
+  }, [universityCoords.lat, universityCoords.lng, universityCoords.radiusM, restricted])
+
+  const circleLineGeoJSON = useMemo(() => {
+    if (!restricted) return null
+    return buildCircleLineGeoJSON(universityCoords.lat, universityCoords.lng, universityCoords.radiusM)
   }, [universityCoords.lat, universityCoords.lng, universityCoords.radiusM, restricted])
 
   // Keep ref in sync with store so Mapbox handlers can read it
@@ -461,6 +486,22 @@ export default function MapView({ onMapClick, onMapReady }: MapViewProps) {
                 'line-width': 1.5,
                 'line-dasharray': [3, 3],
                 'line-opacity': 0.6,
+              }}
+            />
+          </Source>
+        )}
+
+        {/* Geofence circle border — always visible in 3D mode so boundary is clear */}
+        {circleLineGeoJSON && is3D && (
+          <Source id="geofence-circle" type="geojson" data={circleLineGeoJSON}>
+            <Layer
+              id="geofence-circle-line"
+              type="line"
+              paint={{
+                'line-color': '#ff4444',
+                'line-width': 2,
+                'line-dasharray': [4, 3],
+                'line-opacity': 0.8,
               }}
             />
           </Source>

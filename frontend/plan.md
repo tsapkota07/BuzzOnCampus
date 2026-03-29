@@ -1,12 +1,34 @@
-# Post a Pin → Live on Map — Implementation Plan
+# BuzzOnCampus — Frontend Implementation Plan
+# Last updated: 2026-03-29
+# Phases 1–10, 12–15 complete. Remaining: Phase 11.5B-C (seed demo data), Phase 13C (completePin hours), Phase 14E (dispute flow), Phase 16 (3D model pins).
 
-## Context
+## What's Done
+- Phases 1–10: pin creation, real-time map, placement mode, geofence (2D + 3D), auth
+- Phase 11.5A: admin accounts seeded (admin@ysu/kent/osu/gmail.com, password: adminPassword)
+- Phase 12: `api/participations.ts` + ProfilePage past/upcoming sections (from user's own posted pins)
+- Phase 13A–B: `volunteer_hours` in pin schema + CreatePinForm wired
+- Phase 14A–D, 14F: `api/admin.ts`, `AdminPage.tsx`, `approveVolunteerHours` Cloud Function deployed, Navbar Admin link
+- Phase 15: geofence circle border visible in 3D mode (separate LineString layer)
+- Tests: 79 passing — route guards (all routes), adversarial email, geofence boundary
+
+## What's Left
+- **Phase 11.5B–C**: write `scripts/seed_demo_data.mjs` (demo pins + participations for demo)
+- **Phase 13C**: update `completePin` Cloud Function to copy `volunteer_hours` into participation doc with `hours_status: 'pending'`
+- **Phase 13D**: show pending hours count in ProfilePage (amber "X hrs pending" below stat)
+- **Phase 14E**: dispute flow — "Dispute" button on rejected participations in ProfilePage
+- **Phase 16**: 3D model pins per type (Alien/Caveman/Dinosaur/Podium), WebGL context guard
+- **joinPin**: wire Join button to Cloud Function (Tirsan), increment participant_count
+- **Buzz Points**: test completePin end-to-end
+
+---
+
+## Original Context
 Firebase is live (project: buzzoncampus-f9257). Auth, Firestore, and Cloud Functions are
 all connected. The goal is: user fills PostPinModal → pin writes to Firestore → appears
 live on the map for everyone via onSnapshot.
 
 Firestore pin schema:
-  user_id, user_color, type, title, description, buzz_reward,
+  user_id, user_color, type, title, description, buzz_reward, volunteer_hours,
   lat, lng, status, university_id, event_date, participant_count, created_at
 
 ---
@@ -195,26 +217,6 @@ Exit paths:
 - ESC key → cancel, panel closes
 - Cancel button → cancel, panel closes
 
----
-
-## Phase 9 — Upcoming Events Panel ⏳ TODO — will be built inside the List View instead
-
-### Phase 9A
-- [ ] `upcomingOpen: boolean` + `setUpcomingOpen` in MapStore
-
-### Phase 9B
-- [ ] "Upcoming 📅" pill button in Navbar, highlights when open
-
-### Phase 9C — UpcomingPanel component
-- [ ] Left-side panel, slides in from left
-- [ ] Filters livePins to future event_date, sorted ascending
-- [ ] Each card: date badge, type badge, title, buzz reward, participant count
-- [ ] Click card → `setSelectedPin(pin)` + close panel
-
-### Phase 9D
-- [ ] Mount `<UpcomingPanel />` in MapPage
-
----
 
 ---
 
@@ -360,24 +362,27 @@ lookup explicitly returns `Infinity` for these, not 0 or some default.
 
 ---
 
-## Phase 11 — Security Fixes (from adversarial audit)
+## Phase 11 — Security Fixes (from adversarial audit) ✅
 
 ### CRITICAL
-- [ ] **university_id spoof bypass**: Firestore rule trusts `request.resource.data.university_id` from payload. Attacker calls `useAuthStore.setState(s => ({ user: { ...s.user, university_id: 'other' } }))` from console → geofence defeated entirely. Fix: rule must read user doc (`get(/databases/$(database)/documents/users/$(request.auth.uid)).data.university_id`) instead of trusting payload.
-- [ ] **No input validation/XSS**: title/description have no length limits, rendered directly. Fix: max title=100, desc=500 chars in CreatePinForm handleSubmit.
-- [ ] **buzzCost no max**: HTML `min={1}` bypassable via DevTools. Fix: validate `1 <= buzzCost <= 1000` in handleSubmit before createPin call.
+- [x] **university_id spoof bypass**: `firestore.rules` pin create rule now reads `university_id` from the caller's user doc via `get(/databases/.../users/$(request.auth.uid)).data.university_id` — payload value is ignored entirely.
+- [x] **No input validation/XSS**: `CreatePinForm.handleSubmit` enforces title ≤ 100, description ≤ 500 (slice + `maxLength` attr). Character counter appears at 80%+ capacity.
+- [x] **buzzCost no max**: `handleSubmit` validates `1 ≤ buzzCost ≤ 1000` before calling `createPin()`.
 
 ### HIGH
-- [ ] **pins.ts missing auth check**: `createPin()` calls `addDoc()` without verifying `auth.currentUser`. Fix: add `if (!getAuth().currentUser) throw new Error('Not authenticated')` at top of createPin.
-- [ ] **Race condition — map center**: if `lockedPlace` is null, pin coords default to `mapCenter` which can change. Fix: require `lockedPlace` to be set before allowing submit.
+- [x] **pins.ts missing auth check**: `createPin()` now checks `getAuth().currentUser` at the top — throws before any Firestore call if unauthenticated.
+- [x] **Race condition — map center**: `handleSubmit` now requires `lat`/`lng` to be non-undefined — if both `lockedPlace` and `mapCenter` are absent, shows error and blocks submit. The `?? 41.1006` hardcoded fallback is removed.
 
 ### MEDIUM
-- [ ] **Username lookup fragile**: pins store `user_id` not `username`; if account deleted, UID shows instead. Fix: cache `username` string into pin doc at createPin time.
-- [ ] **Client-side place distance filter**: `pinsHere` filtered on frontend — console can inject fake pins. Low priority for hackathon.
+- [x] **Username lookup fragile**: `username` field added to `CreatePinInput` and `FirestorePin`. `handleSubmit` passes `(user as any).username ?? user.email ?? user.uid` — deleted accounts will show the username that was current at pin creation time, not the UID.
+- [ ] **Client-side place distance filter**: `pinsHere` filtered on frontend — acceptable for hackathon, no fix needed.
 
 ### LOW
-- [ ] **No rate limiting**: user can spam createPin. Fix: Cloud Function rate limit (Tirsan).
-- [ ] **Universities collection world-readable**: change rule to `request.auth != null`.
+- [ ] **No rate limiting**: Cloud Function rate limit — Tirsan to add if needed post-hackathon.
+- [x] **Universities collection world-readable**: changed to `allow read: if request.auth != null` — deployed.
+
+### BONUS (discovered during implementation)
+- [x] **admins collection had no Firestore rule**: `getAdminInfo()` in AdminPage was silently failing with permission-denied for all users. Added `allow read: if request.auth != null && request.auth.uid == userId` — AdminPage now works correctly.
 
 ---
 
@@ -431,24 +436,18 @@ If test user Auth accounts don't exist yet, seeding participations will have dan
 
 ---
 
-### Phase 11.5A — Dev Admin Users
-**File:** `scripts/seed_test_users.mjs` (extend existing)
+### Phase 11.5A — Admin Accounts ✅
+**File:** `scripts/seed_admins.py` (new Python script — runs with venv + ADC)
 
-Add these dev users to `TEST_USERS` array:
-```js
-// Dev admins — also written to admins/{uid} collection
-{ email: 'dev@ysu.edu',   username: 'dev_ysu',   university_id: 'ysu',   color: '#CC0000', is_dev: true, is_admin: true },
-{ email: 'dev@kent.edu',  username: 'dev_kent',  university_id: 'kent',  color: '#002664', is_dev: true, is_admin: true },
-{ email: 'dev@osu.edu',   username: 'dev_osu',   university_id: 'osu',   color: '#BB0000', is_dev: true, is_admin: true },
-{ email: 'dev@gmail.com', username: 'dev_general', university_id: 'general', color: '#888888', is_dev: true, is_admin: true },
-```
+Replaces the original plan of extending seed_test_users.mjs. Used Python Firebase Admin SDK
+since ADC was available in the Python venv but not Node at the time.
 
-Script logic additions:
-- [ ] For any user with `is_admin: true`, after creating the user doc, also write
-      `admins/{uid}` with `{ university_id, email, is_dev: true, created_at }`
-- [ ] Add `is_dev: true` field to user doc for dev accounts
-- [ ] All dev accounts get `buzz_balance: 9999` so they can test everything
-- [ ] Password: same `'password'` as test users
+Accounts created and live in Firebase:
+- [x] `admin@ysu.edu` / `adminPassword` — writes `users/{uid}` + `admins/{uid}`, university_id: 'ysu'
+- [x] `admin@kent.edu` / `adminPassword` — university_id: 'kent'
+- [x] `admin@osu.edu` / `adminPassword` — university_id: 'osu'
+- [x] `admin@gmail.com` / `adminPassword` — university_id: 'general' (super-admin, sees all)
+- [x] All accounts: `email_verified: true`, `is_dev: true`, `buzz_balance: 0`
 
 ---
 
@@ -575,39 +574,27 @@ a "Load more" button. Never fetch all at once.
 
 ---
 
-### Phase 12A — Firestore query helper in `api/`
-**File:** `frontend/src/api/participations.ts` (new file — Sumaiya owns `api/`, coordinate with her)
+### Phase 12A — Firestore query helper in `api/` ✅
+**File:** `frontend/src/api/participations.ts` (created)
 
-- [ ] `getUserParticipations(uid: string): Promise<Participation[]>`
-      — query `participations` where `user_id == uid`, ordered by `joined_at` desc, limit 20
-- [ ] `getPin(pinId: string): Promise<FirestorePin | null>`
-      — `getDoc(doc(db, 'pins', pinId))` — used to hydrate participation cards
-- [ ] Export `Participation` type:
-      ```ts
-      interface Participation {
-        id: string
-        pin_id: string
-        user_id: string
-        status: 'joined' | 'completed'
-        joined_at: string
-      }
-      ```
+- [x] `getUserPins(uid)` — query `pins` where `user_id == uid` (user's own posted pins)
+- [x] `getUserParticipations(uid)` — query `participations` where `user_id == uid`
+- [x] `Participation` type exported with `volunteer_hours` and `hours_status`
 
 ---
 
-### Phase 12B — Upcoming & Past sections in ProfilePage
+### Phase 12B — Upcoming & Past sections in ProfilePage ✅ (partial)
 **File:** `frontend/src/pages/ProfilePage.tsx`
 
-- [ ] On mount: call `getUserParticipations(user.uid)`, store in local state
-- [ ] For each participation, call `getPin(pin_id)` — store hydrated pins in parallel with `Promise.all`
-- [ ] Split into two arrays:
-      - `upcoming`: pin.status == 'active' AND pin.event_date is in the future
-      - `past`: participation.status == 'completed' OR pin.status != 'active'
-- [ ] Loading skeleton while fetching (3 placeholder cards)
-- [ ] "Upcoming Events" section — card per pin: type badge, title, date, buzz reward
-- [ ] "Past Events" section — card per pin: type badge, title, completed date, buzz earned
-- [ ] Both sections collapsed by default with a "Show all" toggle if > 3 items
-- [ ] Empty state: "No upcoming events — go drop a pin! 📍"
+- [x] On mount: calls `getUserPins(user.uid)` — shows pins the user **posted**
+      ⚠️ Note: original plan was to show pins they **participated in** — that's still pending
+      (joinPin not wired yet, so no real participations exist to show)
+- [x] Splits into upcoming (active + future event_date) and past (completed/cancelled or past date)
+- [x] PinCard component with type badge, hours badge for volunteer, participant count + buzz
+- [x] Loading state + empty state
+- [x] "Pins Posted" stat reads real count; "Vol. Hours" reads `volunteer_hours_total` from user doc
+- [ ] Show participated-in events (pending until joinPin is wired — Phase 12B remainder)
+- [ ] Pending hours "X hrs pending" display below vol. hours stat (Phase 13D)
 
 ---
 
@@ -645,42 +632,39 @@ Display hours as "pending" until admin approves (Phase 14). Never add to the off
 
 ---
 
-### Phase 13A — Add `volunteer_hours` to pin schema
-**Files:** `frontend/src/api/pins.ts`, `frontend/src/store/useMapStore.ts`
+### Phase 13A — Add `volunteer_hours` to pin schema ✅
+**Files:** `frontend/src/api/pins.ts`
 
-- [ ] Add `volunteer_hours: number | null` to `FirestorePin` and `Pin` interfaces
-      — null for non-volunteer pins, 1–12 for volunteer
-- [ ] Add `volunteer_hours?: number` to `CreatePinInput`
-
----
-
-### Phase 13B — Volunteer hours field in CreatePinForm
-**File:** `frontend/src/components/map/DetailPanel.tsx` (inside `CreatePinForm`)
-
-- [ ] When `type === 'volunteer'`: show a number input "Volunteer Hours (1–12)"
-      — `min={1}` `max={12}`, required for volunteer type
-- [ ] In `handleSubmit`: validate `1 <= hours <= 12` — reject and show error if out of range
-- [ ] Strip `volunteer_hours` from payload if `type !== 'volunteer'` (defense-in-depth)
-- [ ] Pass `volunteer_hours` to `createPin()`
+- [x] `volunteer_hours: number | null` added to `FirestorePin` interface
+- [x] `volunteer_hours: number | null` added to `CreatePinInput` interface
 
 ---
 
-### Phase 13C — Store hours in participations on completion
-**File:** `functions/src/pins/completePin.ts` — coordinate with **Tirsan**
+### Phase 13B — Volunteer hours field in CreatePinForm ✅
+**File:** `frontend/src/components/map/DetailPanel.tsx`
 
-- [ ] Tirsan: when writing the `participations` doc on completion, include:
+- [x] Number input shown when `type === 'volunteer'` (already existed in form)
+- [x] `volunteer_hours` passed to `createPin()` in handleSubmit — `null` for non-volunteer types
+- [ ] Input validation (1–12 range with error message) — currently uses `min={1}` HTML attr only
+
+---
+
+### Phase 13C — Store hours in participations on completion ⏳ (Tirsan)
+**File:** `functions/src/pins/completePin.ts`
+
+- [ ] When writing the participation doc on completion, include:
       `volunteer_hours: pin.volunteer_hours ?? null`
-      `hours_status: 'pending'` (not 'approved' yet)
-- [ ] Tirsan: do NOT add hours to `users.volunteer_hours_total` until admin approves (Phase 14)
+      `hours_status: pin.type === 'volunteer' ? 'pending' : null`
+- [ ] Do NOT increment `volunteer_hours_total` here — that happens in `approveVolunteerHours`
 
 ---
 
-### Phase 13D — Volunteer hours display in ProfilePage
+### Phase 13D — Pending hours display in ProfilePage ⏳
 **File:** `frontend/src/pages/ProfilePage.tsx`
 
-- [ ] "Vol. Hours" stat card currently hardcoded 0 — query approved hours from user doc
-      `users/{uid}.volunteer_hours_total` (Tirsan increments this on approval)
-- [ ] Show pending hours separately: "X hrs pending approval" in amber text below the stat
+- [x] "Vol. Hours" stat reads `volunteer_hours_total` from user doc (approved hours)
+- [ ] Show pending hours count: query participations where `hours_status == 'pending'`, sum hours,
+      display "X hrs pending" in amber below the stat card
 
 ---
 
@@ -730,93 +714,61 @@ Future: require 2FA for admin accounts (post-hackathon).
 
 ---
 
-### Phase 14A — Firestore schema additions
-Coordinate with **Sumaiya** (owns `firestore.rules`) and **Tirsan** (owns `functions/`).
-
-New collection `admins/{uid}`:
-```
-admins/{uid}
-  university_id: string     // e.g. 'kent', 'ysu', 'general'
-  email: string
-  created_at: Timestamp
-```
-
-Updates to `participations/{id}`:
-```
-  volunteer_hours: number | null
-  hours_status: 'pending' | 'approved' | 'disputed' | 'rejected'
-  dispute_count: number       // max 1 dispute allowed
-  dispute_reason: string | null
-  reviewed_by: string | null  // admin uid
-  reviewed_at: Timestamp | null
-```
-
-New Cloud Function `approveVolunteerHours(participationId, action: 'approve'|'reject')`:
-- Tirsan owns this
-- Validates caller is in `admins` collection
-- Validates `participation.hours_status == 'pending'` or `'disputed'`
-- Validates admin and participant share university (or admin is 'general')
-- Validates `approver != participant`
-- On approve: sets `hours_status: 'approved'`, increments `users/{uid}.volunteer_hours_total`
-- On reject: sets `hours_status: 'rejected'`
+### Phase 14A — Firestore schema + Cloud Function ✅
+- [x] `admins/{uid}` collection live — seeded via `scripts/seed_admins.py`
+- [x] `participations` schema includes `volunteer_hours`, `hours_status`, `dispute_count`, `dispute_reason`, `reviewed_by`, `reviewed_at`
+- [x] `approveVolunteerHours` Cloud Function deployed — validates admin scope, enforces university match, atomically approves/rejects
 
 ---
 
-### Phase 14B — Admin check helper
-**File:** `frontend/src/api/admin.ts` (new — coordinate with Sumaiya)
+### Phase 14B — Admin check helper ✅
+**File:** `frontend/src/api/admin.ts` (created)
 
-- [ ] `isAdmin(uid: string): Promise<boolean>`
-      — `getDoc(doc(db, 'admins', uid))` → returns `snap.exists()`
-- [ ] `getPendingHoursRequests(university_id: string): Promise<PendingRequest[]>`
-      — query `participations` where `hours_status == 'pending'`
-        AND `volunteer_hours != null`
-        AND (admin.university_id matches OR admin is 'general')
+- [x] `getAdminInfo(uid)` — returns `AdminInfo | null` (includes `university_id` for scope)
+- [x] `isAdmin(uid)` — deprecated wrapper kept for backwards compat
+- [x] `getPendingHoursRequests(adminUniversityId)` — skips university filter when `'general'`; loads pin + username for each participation
+- [x] `callApproveVolunteerHours(participationId, action)` — calls Cloud Function
 
 ---
 
-### Phase 14C — Admin gate in App + route
+### Phase 14C — Admin route in App ✅ (partial)
 **File:** `frontend/src/App.tsx`
 
-- [ ] On auth load: after fetching user doc, also call `isAdmin(uid)` — store result in `useAuthStore`
-      as `isAdmin: boolean`
-- [ ] Add route `/admin` → `<AdminPage />`, guarded by `user && isAdmin`
+- [x] Route `/admin` added, guarded by `user` (same as other protected routes)
+- [ ] `isAdmin` flag not stored in `useAuthStore` — AdminPage fetches admin status itself on mount
+      (acceptable for now; if needed later, add to auth load in App.tsx useEffect)
 
 ---
 
-### Phase 14D — AdminPage
-**File:** `frontend/src/pages/AdminPage.tsx` (new)
+### Phase 14D — AdminPage ✅
+**File:** `frontend/src/pages/AdminPage.tsx` (created)
 
-- [ ] Top bar: same wordmark + "Admin Panel" label + university name
-- [ ] "Pending Approvals" list — each card shows:
-      - Participant name (username from pin or user doc)
-      - Event title, date, hours claimed
-      - Approve button (green) → calls `approveVolunteerHours(id, 'approve')`
-      - Reject button (red) → calls `approveVolunteerHours(id, 'reject')`
-      - Loading state per card while Cloud Function is in flight
-- [ ] "Disputed" tab — same list filtered by `hours_status == 'disputed'`
-- [ ] Empty state: "No pending requests 🎉"
-- [ ] No route link in Navbar for non-admins — admins see "Admin" in their dropdown
+- [x] Scope card shows university name + description of what admin can approve
+- [x] Super-admin (general) badge vs scoped badge
+- [x] Pending requests list with approve/reject buttons, per-card loading state
+- [x] University tag on each card when super-admin is viewing across universities
+- [x] Empty state, access denied state, loading state
+- [ ] "Disputed" tab (Phase 14E prerequisite — disputed participations don't exist yet)
 
 ---
 
-### Phase 14E — Dispute flow for users
+### Phase 14E — Dispute flow for users ⏳
 **File:** `frontend/src/pages/ProfilePage.tsx`
 
-- [ ] In "Past Events" section, if `participation.hours_status == 'rejected'`
-      AND `participation.dispute_count < 1`:
-      show "Dispute" button — opens a small modal for reason text (max 200 chars)
-- [ ] On submit: write `dispute_reason`, `hours_status: 'disputed'`, `dispute_count: 1`
-      directly to Firestore (user writes their own participation doc)
-      ⚠️ **Firestore rule**: user can only write `dispute_reason`/`hours_status`/`dispute_count`
-      on their own participation when `hours_status == 'rejected'` AND `dispute_count < 1`
+- [ ] In past pins section, if `participation.hours_status == 'rejected'` AND `dispute_count < 1`:
+      show "Dispute" button → inline text input for reason → write `hours_status: 'disputed'`,
+      `dispute_reason`, `dispute_count: 1` to Firestore
+      ⚠️ Firestore rule needed: user can only update own participation when `hours_status == 'rejected'` AND `dispute_count < 1`
+- [ ] This requires participation data to be loaded in ProfilePage (currently loads own pins only)
 
 ---
 
-### Phase 14F — Admin link in Navbar dropdown
+### Phase 14F — Admin link in Navbar ✅
 **File:** `frontend/src/components/ui/Navbar.tsx`
 
-- [ ] Read `isAdmin` from `useAuthStore`
-- [ ] If `isAdmin`: add "🛡️ Admin Panel" button above "Log Out" in dropdown → `navigate('/admin')`
+- [x] "🛡️ Admin" added to avatar dropdown for all logged-in users
+      Note: shows for everyone but AdminPage gates access — acceptable for hackathon
+- [ ] Optionally hide link for non-admins (requires isAdmin in AuthStore)
 
 ---
 
@@ -836,20 +788,21 @@ No security surface — purely visual. No data writes involved.
 
 ---
 
-### Phase 15A — Separate fill and line layer visibility
+### Phase 15A — Separate fill and line layer visibility ✅
 **File:** `frontend/src/components/map/MapView.tsx`
 
-- [ ] The `<Source>` and both `<Layer>`s currently only render when `!is3D`
-- [ ] Change: render `<Source>` always (when restricted account)
-- [ ] Fill layer (`fill-extrusion` red tint): still skip in 3D (`!is3D`)
-- [ ] Line layer (circle boundary): always render, regardless of `is3D`
-      — increase `line-width` to 2.5 and `line-opacity` to 0.8 in 3D for visibility
+- [x] `buildCircleLineGeoJSON(lat, lng, radiusM)` added — returns a GeoJSON `LineString` tracing
+      just the campus circle (no world bounding box)
+- [x] `circleLineGeoJSON` computed via `useMemo` alongside `geofenceGeoJSON`
+- [x] 2D mode: existing world-minus-circle fill + border shown (`!is3D`)
+- [x] 3D mode: separate `<Source id="geofence-circle">` with a `line` layer shown (`is3D`)
+      — dashed red line, `line-width: 2`, `line-opacity: 0.8`
 
 ---
 
 ---
 
-## Phase 16 — 3D Model Pins
+## Phase 16 — 3D Model Pins ⏳ (not started)
 
 ### Goal
 Replace the current `red.glb` avatar marker with distinct per-type 3D models from

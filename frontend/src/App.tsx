@@ -11,6 +11,7 @@ import AuthPage from './pages/AuthPage'
 import ProfilePage from './pages/ProfilePage'
 import FeedPage from './pages/FeedPage'
 import NotFoundPage from './pages/NotFoundPage'
+import AdminPage from './pages/AdminPage'
 
 function App() {
   const { user, setUser } = useAuthStore()
@@ -67,6 +68,7 @@ function App() {
         <Route path="/map" element={user ? <MapPage /> : <Navigate to="/" replace />} />
         <Route path="/profile" element={user ? <ProfilePage /> : <Navigate to="/" replace />} />
         <Route path="/feed" element={user ? <FeedPage /> : <Navigate to="/" replace />} />
+        <Route path="/admin" element={user ? <AdminPage /> : <Navigate to="/" replace />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>

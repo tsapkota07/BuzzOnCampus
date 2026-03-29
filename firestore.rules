@@ -55,7 +55,9 @@ service cloud.firestore {
     }
 
     // Pins — anyone authenticated can read
-    // Create: must own the pin, status must be active, and coords must be within campus
+    // Create: must own the pin, status must be active, and coords must be within campus.
+    // Phase 11 CRITICAL: university_id is read from the user's Firestore doc — NOT from the
+    // pin payload — so an attacker cannot spoof university_id:'other' to bypass the geofence.
     match /pins/{pinId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null
@@ -64,7 +66,7 @@ service cloud.firestore {
         && withinCampus(
              request.resource.data.lat,
              request.resource.data.lng,
-             request.resource.data.university_id
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.university_id
            );
       allow update, delete: if false; // Cloud Functions only
     }
@@ -91,15 +93,22 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Universities — public read, no write from client
+    // Universities — authenticated read only (Phase 11 LOW)
     match /universities/{universityId} {
-      allow read: if true;
+      allow read: if request.auth != null;
       allow write: if false;
     }
 
     // Businesses — public read, no write from client
     match /businesses/{businessId} {
       allow read: if true;
+      allow write: if false;
+    }
+
+    // Admins — authenticated users may read their own doc (to check admin status)
+    // All writes are via Admin SDK only (seed scripts / console)
+    match /admins/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
       allow write: if false;
     }
   }
