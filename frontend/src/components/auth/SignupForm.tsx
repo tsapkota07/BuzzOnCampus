@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { httpsCallable } from 'firebase/functions'
-import { functions } from '../../api/firebase'
+import { fetchSignInMethodsForEmail } from 'firebase/auth'
+import { collection, query, where, getDocs } from 'firebase/firestore'
+import { auth, db, functions } from '../../api/firebase'
 
 interface SignupFormProps {
   university_id: string
@@ -61,6 +63,13 @@ export default function SignupForm({
 
     setLoading(true)
     try {
+      const [methods, usernameSnap] = await Promise.all([
+        fetchSignInMethodsForEmail(auth, email),
+        getDocs(query(collection(db, 'users'), where('username', '==', username.trim()))),
+      ])
+      if (methods.length > 0) { setError('An account with this email already exists.'); setLoading(false); return }
+      if (!usernameSnap.empty) { setError('That username is already taken.'); setLoading(false); return }
+
       const sendOtp = httpsCallable(functions, 'sendOtp')
       await sendOtp({ email })
       onOtpSent(email, password, username.trim())
