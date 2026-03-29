@@ -16,65 +16,73 @@ const TYPE_LABELS: Record<string, string> = {
   help:      'HELP',
 }
 
-interface AvatarModelProps {
-  userColor: string
+// Pre-load models so they're ready before pins render
+useGLTF.preload('/red.glb')
+useGLTF.preload('/Alien.glb')
+useGLTF.preload('/Caveman.glb')
+
+// Scale per model — adjust if a model renders too small or large
+const MODEL_SCALE: Record<string, number> = {
+  '/Caveman.glb': 1.6,
+  '/Alien.glb':   1.6,
 }
 
-function AvatarModel({ userColor }: AvatarModelProps) {
-  const { scene } = useGLTF('/red.glb')
+interface AvatarModelProps {
+  userColor: string
+  modelPath: string
+}
+
+function AvatarModel({ userColor, modelPath }: AvatarModelProps) {
+  const { scene } = useGLTF(modelPath)
   const modelRef = useRef<Group>(null)
 
-  // Apply userColor override to all mesh materials
   scene.traverse(child => {
     if ((child as THREE.Mesh).isMesh) {
       const mesh = child as THREE.Mesh
-      if (Array.isArray(mesh.material)) {
-        mesh.material.forEach(mat => {
-          if ((mat as THREE.MeshStandardMaterial).color) {
-            (mat as THREE.MeshStandardMaterial).color.set(userColor)
-          }
-        })
-      } else if ((mesh.material as THREE.MeshStandardMaterial).color) {
-        ;(mesh.material as THREE.MeshStandardMaterial).color.set(userColor)
-      }
+      const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+      mats.forEach(mat => {
+        if ((mat as THREE.MeshStandardMaterial).color) {
+          ;(mat as THREE.MeshStandardMaterial).color.set(userColor)
+        }
+      })
     }
   })
 
   useFrame(() => {
-    if (modelRef.current) {
-      modelRef.current.rotation.y += 0.01
-    }
+    if (modelRef.current) modelRef.current.rotation.y += 0.002
   })
 
-  return <primitive object={scene} ref={modelRef} scale={1} />
+  const scale = MODEL_SCALE[modelPath] ?? 1
+
+  return <primitive object={scene} ref={modelRef} scale={scale} />
 }
 
 interface AvatarMarkerProps {
   userColor?: string
   type?: string
+  modelPath?: string
   onClick?: () => void
 }
 
 export default function AvatarMarker({
   userColor = '#fd8b00',
   type,
+  modelPath = '/red.glb',
   onClick,
 }: AvatarMarkerProps) {
   const badgeColor = type ? TYPE_COLORS[type] : undefined
   const badgeLabel = type ? TYPE_LABELS[type] : undefined
 
   return (
-    <div
-      className="flex flex-col items-center cursor-pointer"
-      onClick={onClick}
-    >
+    <div className="flex flex-col items-center cursor-pointer" onClick={onClick}>
       <Canvas
-        style={{ width: 70, height: 70 }}
+        style={{ width: 80, height: 80 }}
         camera={{ position: [2, 2, 3], fov: 50 }}
       >
-        <ambientLight intensity={0.3} />
-        <directionalLight position={[2, 2, 2]} intensity={1.5} />
-        <AvatarModel userColor={userColor} />
+        <ambientLight intensity={1.2} />
+        <directionalLight position={[2, 4, 3]} intensity={2.5} />
+        <directionalLight position={[-2, 1, -1]} intensity={0.8} />
+        <AvatarModel userColor={userColor} modelPath={modelPath} />
       </Canvas>
 
       {badgeColor && badgeLabel && (
