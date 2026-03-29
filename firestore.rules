@@ -68,7 +68,14 @@ service cloud.firestore {
              request.resource.data.lng,
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.university_id
            );
-      allow update, delete: if false; // Cloud Functions only
+      // Admins can update pin content fields; coords and ownership are immutable
+      allow update: if request.auth != null
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        && request.resource.data.user_id == resource.data.user_id
+        && request.resource.data.lat == resource.data.lat
+        && request.resource.data.lng == resource.data.lng;
+      allow delete: if request.auth != null
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
     // Participations — read own, create own

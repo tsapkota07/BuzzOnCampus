@@ -1,6 +1,9 @@
 import {
   collection,
   addDoc,
+  doc,
+  updateDoc,
+  deleteDoc,
   query,
   where,
   onSnapshot,
@@ -63,6 +66,22 @@ export async function createPin(input: CreatePinInput): Promise<string> {
     created_at: serverTimestamp(),
   })
   return ref.id
+}
+
+// ─── Update a pin (admin only) ───────────────────────────────────────────────
+export type PinUpdateFields = Partial<Pick<FirestorePin,
+  'title' | 'description' | 'event_date' | 'buzz_reward' | 'volunteer_hours' | 'status'
+>>
+
+export async function updatePin(pinId: string, updates: PinUpdateFields): Promise<void> {
+  if (!getAuth().currentUser) throw new Error('Not authenticated')
+  await updateDoc(doc(db, 'pins', pinId), updates as Record<string, unknown>)
+}
+
+// ─── Delete a pin (admin only) ───────────────────────────────────────────────
+export async function deletePin(pinId: string): Promise<void> {
+  if (!getAuth().currentUser) throw new Error('Not authenticated')
+  await deleteDoc(doc(db, 'pins', pinId))
 }
 
 // ─── Subscribe to live pins for a university ─────────────────────────────────

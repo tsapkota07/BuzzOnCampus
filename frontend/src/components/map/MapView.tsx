@@ -65,6 +65,41 @@ function buildCircleLineGeoJSON(lat: number, lng: number, radiusM: number): GeoJ
   }
 }
 
+/** Spread pins that are within ~20 m of each other into a small circle so
+ *  each one is individually visible and clickable on the map. */
+function spreadOverlappingPins(pins: MockUserPin[]): Array<MockUserPin & { renderLat: number; renderLng: number }> {
+  const THRESHOLD = 0.00018  // ~20 m in degrees
+  const SPREAD_R  = 0.00028  // ~31 m spread radius
+  const assigned = new Set<string>()
+  const result: Array<MockUserPin & { renderLat: number; renderLng: number }> = []
+
+  for (const pin of pins) {
+    if (assigned.has(pin.id)) continue
+    const group: MockUserPin[] = [pin]
+    assigned.add(pin.id)
+    for (const other of pins) {
+      if (assigned.has(other.id)) continue
+      if (Math.abs(pin.lat - other.lat) < THRESHOLD && Math.abs(pin.lng - other.lng) < THRESHOLD) {
+        group.push(other)
+        assigned.add(other.id)
+      }
+    }
+    if (group.length === 1) {
+      result.push({ ...pin, renderLat: pin.lat, renderLng: pin.lng })
+    } else {
+      group.forEach((p, i) => {
+        const angle = (2 * Math.PI * i) / group.length - Math.PI / 2
+        result.push({
+          ...p,
+          renderLat: p.lat + SPREAD_R * Math.cos(angle),
+          renderLng: p.lng + SPREAD_R * Math.sin(angle) / Math.cos(p.lat * Math.PI / 180),
+        })
+      })
+    }
+  }
+  return result
+}
+
 function mapboxCategoryToOurs(category: string): string {
   const c = category.toLowerCase()
   if (c.includes('restaurant') || c.includes('food') || c.includes('dining')) return 'restaurant'
@@ -160,6 +195,8 @@ export default function MapView({ onMapClick, onMapReady }: MapViewProps) {
         buzzReward: pin.buzz_reward,
         participantCount: pin.participant_count,
         createdAt: pin.created_at,
+        eventDate: pin.event_date ?? null,
+        volunteerHours: pin.volunteer_hours ?? null,
       }))
       setLivePins(mapped)
     })
@@ -460,8 +497,8 @@ export default function MapView({ onMapClick, onMapReady }: MapViewProps) {
           </Marker>
         )}
 
-        {visibleUserPins.map(pin => (
-          <Marker key={pin.id} latitude={pin.lat} longitude={pin.lng} anchor="bottom">
+        {spreadOverlappingPins(visibleUserPins).map(pin => (
+          <Marker key={pin.id} latitude={pin.renderLat} longitude={pin.renderLng} anchor="bottom">
             <AvatarMarker
               userColor={pin.userColor}
               type={pin.type}

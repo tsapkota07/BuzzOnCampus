@@ -3,9 +3,10 @@ import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../../api/firebase'
 import { useMapStore } from '../../store/useMapStore'
 import type { MockPlacePost } from '../../store/useMapStore'
-import { createPin } from '../../api/pins'
+import { createPin, updatePin, deletePin } from '../../api/pins'
 import { useAuthStore } from '../../store/useAuthStore'
 import { isRestrictedAccount, isWithinCampus } from '../../utils/universityCoords'
+import { getAdminInfo } from '../../api/admin'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -410,11 +411,120 @@ function CreatePinForm() {
   )
 }
 
+// ─── Admin Edit Pin Form ──────────────────────────────────────────────────────
+
+function EditPinForm({ pinId, initial, onDone }: {
+  pinId: string
+  initial: { title: string; description: string; event_date: string | null; buzz_reward: number; volunteer_hours: number | null; type: string }
+  onDone: () => void
+}) {
+  const [title, setTitle] = useState(initial.title)
+  const [description, setDescription] = useState(initial.description)
+  const [eventDate, setEventDate] = useState(initial.event_date ? initial.event_date.slice(0, 10) : '')
+  const [eventTime, setEventTime] = useState(initial.event_date ? initial.event_date.slice(11, 16) : '')
+  const [buzzReward, setBuzzReward] = useState(String(initial.buzz_reward))
+  const [hours, setHours] = useState(initial.volunteer_hours != null ? String(initial.volunteer_hours) : '')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSave = async () => {
+    const trimmedTitle = title.trim().slice(0, 100)
+    if (!trimmedTitle) { setError('Title is required'); return }
+    const buzzNum = Number(buzzReward)
+    if (isNaN(buzzNum) || buzzNum < 0 || buzzNum > 1000) { setError('Buzz reward must be 0–1000'); return }
+    const event_date = eventDate
+      ? (eventTime ? `${eventDate}T${eventTime}` : eventDate)
+      : null
+    const hoursNum = hours ? Number(hours) : null
+    setSaving(true)
+    setError(null)
+    try {
+      await updatePin(pinId, {
+        title: trimmedTitle,
+        description: description.trim().slice(0, 500),
+        event_date,
+        buzz_reward: buzzNum,
+        volunteer_hours: initial.type === 'volunteer' ? hoursNum : null,
+      })
+      onDone()
+    } catch (e) {
+      console.error(e)
+      setError('Save failed. Check console.')
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3 mt-4">
+      <p className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: '#fd8b00' }}>✏️ Edit Pin</p>
+      <input
+        style={inputStyle} type="text" placeholder="Title" maxLength={100}
+        value={title} onChange={e => setTitle(e.target.value)}
+      />
+      <textarea
+        style={{ ...inputStyle, resize: 'none', minHeight: 80 }}
+        placeholder="Description" maxLength={500}
+        value={description} onChange={e => setDescription(e.target.value)}
+      />
+      {(initial.type === 'event' || initial.type === 'volunteer') && (
+        <div className="flex gap-2">
+          <input style={{ ...inputStyle, flex: 1 }} type="date" value={eventDate} onChange={e => setEventDate(e.target.value)} />
+          <input style={{ ...inputStyle, flex: 1 }} type="time" value={eventTime} onChange={e => setEventTime(e.target.value)} />
+        </div>
+      )}
+      {initial.type === 'volunteer' && (
+        <input style={inputStyle} type="number" placeholder="Volunteer hours (1–12)"
+          min={1} max={12} value={hours} onChange={e => setHours(e.target.value)} />
+      )}
+      <input style={inputStyle} type="number" placeholder="Buzz reward"
+        min={0} max={1000} value={buzzReward} onChange={e => setBuzzReward(e.target.value)} />
+      {error && <p style={{ fontSize: 12, color: '#f87171', textAlign: 'center' }}>{error}</p>}
+      <div className="flex gap-2 mt-1">
+        <button
+          onClick={onDone} disabled={saving}
+          style={{
+            flex: 1, padding: '10px', borderRadius: 10, fontSize: 13, fontWeight: 700,
+            border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)',
+            color: '#aaa', cursor: 'pointer',
+          }}
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleSave} disabled={saving || !title.trim()}
+          style={{
+            flex: 2, padding: '10px', borderRadius: 10, fontSize: 13, fontWeight: 700,
+            border: 'none', cursor: saving ? 'not-allowed' : 'pointer',
+            background: saving ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #fd8b00, #8c4a00)',
+            color: saving ? '#555' : 'white',
+          }}
+        >
+          {saving ? 'Saving...' : 'Save Changes'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main DetailPanel ─────────────────────────────────────────────────────────
 
 export default function DetailPanel() {
   const { selectedPin, selectedPlace, livePins, createPinContext, pinPlacementMode, hoveredPlace,
           setSelectedPin, setSelectedPlace, setCreatePinContext, setPinPlacementMode } = useMapStore()
+
+  const user = useAuthStore(state => state.user)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  useEffect(() => {
+    if (!user) { setIsAdmin(false); return }
+    getAdminInfo(user.uid).then(info => setIsAdmin(info !== null)).catch(() => setIsAdmin(false))
+  }, [user?.uid])
+
+  // Reset edit/delete state when selected pin changes
+  useEffect(() => { setEditing(false); setConfirmDelete(false) }, [selectedPin?.id])
 
   // Username cache: uid → display name
   const usernameCache = useRef<Record<string, string>>({})
@@ -538,13 +648,78 @@ export default function DetailPanel() {
 
       {/* PIN DETAIL */}
       {selectedPin && (
-        <div className="flex flex-col h-full p-6">
-          <div className="mb-4 mt-2">
+        <div className="flex flex-col h-full p-6 overflow-y-auto">
+          <div className="flex items-center justify-between mb-4 mt-2">
             <span className="text-xs font-bold uppercase px-3 py-1 rounded-full text-white"
               style={{ background: PIN_COLORS[selectedPin.type] }}>
               {PIN_LABELS[selectedPin.type]}
             </span>
+            {isAdmin && !editing && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setEditing(true)}
+                  style={{
+                    fontSize: 12, fontWeight: 700, padding: '4px 12px', borderRadius: 999,
+                    border: '1px solid rgba(253,139,0,0.4)', background: 'rgba(253,139,0,0.1)',
+                    color: '#fd8b00', cursor: 'pointer',
+                  }}
+                >
+                  ✏️ Edit
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  style={{
+                    fontSize: 12, fontWeight: 700, padding: '4px 12px', borderRadius: 999,
+                    border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.1)',
+                    color: '#f87171', cursor: 'pointer',
+                  }}
+                >
+                  🗑 Delete
+                </button>
+              </div>
+            )}
           </div>
+
+          {confirmDelete && (
+            <div className="mb-4 p-4 rounded-xl" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}>
+              <p className="text-sm font-bold text-white mb-3">Delete this pin permanently?</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  disabled={deleting}
+                  style={{
+                    flex: 1, padding: '8px', borderRadius: 8, fontSize: 13, fontWeight: 700,
+                    border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)',
+                    color: '#aaa', cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={deleting}
+                  onClick={async () => {
+                    setDeleting(true)
+                    try {
+                      await deletePin(selectedPin.id)
+                      close()
+                    } catch (e) {
+                      console.error(e)
+                      setDeleting(false)
+                      setConfirmDelete(false)
+                    }
+                  }}
+                  style={{
+                    flex: 2, padding: '8px', borderRadius: 8, fontSize: 13, fontWeight: 700,
+                    border: 'none', cursor: deleting ? 'not-allowed' : 'pointer',
+                    background: deleting ? 'rgba(255,255,255,0.08)' : '#dc2626',
+                    color: 'white',
+                  }}
+                >
+                  {deleting ? 'Deleting...' : 'Yes, Delete'}
+                </button>
+              </div>
+            </div>
+          )}
           <h2 className="text-white font-extrabold text-xl mb-2">{selectedPin.title}</h2>
           <div className="flex items-center gap-2 mb-4">
             <div className="w-4 h-4 rounded-full" style={{ background: selectedPin.userColor }} />
@@ -564,12 +739,28 @@ export default function DetailPanel() {
           <p className="text-sm mb-6" style={{ color: '#aaa' }}>
             👥 {selectedPin.participantCount} {selectedPin.participantCount === 1 ? 'person' : 'people'} joined
           </p>
-          <div className="mt-auto">
-            <button className="w-full py-3.5 rounded-xl font-bold text-white text-base"
-              style={{ background: 'linear-gradient(135deg, #fd8b00, #8c4a00)' }}>
-              {selectedPin.type === 'help' ? 'Accept & Help' : 'Join'}
-            </button>
-          </div>
+
+          {editing ? (
+            <EditPinForm
+              pinId={selectedPin.id}
+              initial={{
+                title: selectedPin.title,
+                description: selectedPin.description,
+                event_date: selectedPin.eventDate,
+                buzz_reward: selectedPin.buzzReward,
+                volunteer_hours: selectedPin.volunteerHours ?? null,
+                type: selectedPin.type,
+              }}
+              onDone={() => setEditing(false)}
+            />
+          ) : (
+            <div className="mt-auto">
+              <button className="w-full py-3.5 rounded-xl font-bold text-white text-base"
+                style={{ background: 'linear-gradient(135deg, #fd8b00, #8c4a00)' }}>
+                {selectedPin.type === 'help' ? 'Accept & Help' : 'Join'}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
