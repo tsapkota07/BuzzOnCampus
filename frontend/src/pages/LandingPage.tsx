@@ -48,7 +48,7 @@ const universities: University[] = [
     },
   },
   {
-    id: 'ohio',
+    id: 'osu',
     name: 'Ohio State University',
     domain: 'osu.edu',
     lat: 40.0067,
@@ -70,7 +70,7 @@ const universities: University[] = [
     },
   },
   {
-    id: 'youngstown',
+    id: 'ysu',
     name: 'Youngstown State University',
     domain: 'ysu.edu',
     lat: 41.1006,

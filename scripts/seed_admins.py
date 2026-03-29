@@ -57,7 +57,7 @@ def seed():
                 'color':                a['color'],
                 'avatar_url':           None,
                 'email_verified':       True,   # skip OTP — pre-verified admin account
-                'is_dev':               True,
+                'is_dev':               False,
                 'created_at':           now,
             }, merge=True)
 
@@ -65,7 +65,7 @@ def seed():
             db.collection('admins').document(uid).set({
                 'email':          email,
                 'university_id':  a['university_id'],
-                'is_dev':         True,
+                'is_dev':         False,
                 'created_at':     now,
             }, merge=True)
 
