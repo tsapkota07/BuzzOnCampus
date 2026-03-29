@@ -12,6 +12,7 @@ interface LocationState {
   isSignup?: boolean
   email?: string
   username?: string
+  password?: string
   photos?: string[]
   theme?: Theme
 }
@@ -151,6 +152,7 @@ export default function AuthPage() {
               universityDomain={universityDomain}
               initialEmail={state.email}
               initialUsername={state.username}
+              initialPassword={state.password}
               theme={theme}
               onSwitchToLogin={() => setIsSignup(false)}
               onOtpSent={handleOtpSent}

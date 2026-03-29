@@ -193,7 +193,6 @@ export default function LandingPage() {
       setError('Please enter a username.')
       return
     }
-<<<<<<< HEAD
     if (!password) {
       setError('Please enter your password.')
       return
@@ -202,8 +201,6 @@ export default function LandingPage() {
       setError('Passwords do not match.')
       return
     }
-    navigate('/map')
-=======
     navigate('/auth', {
       state: {
         university_id: selectedUniversity.id,
@@ -212,11 +209,11 @@ export default function LandingPage() {
         isSignup,
         email,
         username,
+        password,
         photos: selectedUniversity.photos,
         theme: selectedUniversity.theme,
       },
     })
->>>>>>> ee974413515b64d98e46403cab5f25a0038b481c
   }
 
   return (

@@ -2,10 +2,11 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users — read own doc, write only via Cloud Functions
+    // Users — read own doc, create own doc on signup, updates via Cloud Functions
     match /users/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
-      allow write: if false; // Cloud Functions only
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update, delete: if false; // Cloud Functions only
     }
 
     // Pins — anyone authenticated at same university can read
@@ -33,6 +34,11 @@ service cloud.firestore {
         && (resource.data.from_user_id == request.auth.uid
           || resource.data.to_user_id == request.auth.uid);
       allow write: if false; // Cloud Functions only
+    }
+
+    // OTPs — managed entirely by Cloud Functions
+    match /otps/{email} {
+      allow read, write: if false;
     }
 
     // Universities — public read, no write from client

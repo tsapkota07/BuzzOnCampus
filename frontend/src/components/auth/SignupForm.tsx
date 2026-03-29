@@ -7,6 +7,7 @@ interface SignupFormProps {
   universityDomain: string
   initialEmail?: string
   initialUsername?: string
+  initialPassword?: string
   theme: {
     inputBg: string
     text: string
@@ -23,14 +24,15 @@ export default function SignupForm({
   universityDomain,
   initialEmail = '',
   initialUsername = '',
+  initialPassword = '',
   theme,
   onSwitchToLogin,
   onOtpSent,
 }: SignupFormProps) {
   const [email, setEmail] = useState(initialEmail)
   const [username, setUsername] = useState(initialUsername)
-  const [password, setPassword] = useState('')
-  const [confirm, setConfirm] = useState('')
+  const [password, setPassword] = useState(initialPassword)
+  const [confirm, setConfirm] = useState(initialPassword)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
