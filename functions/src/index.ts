@@ -2,7 +2,8 @@
 // Owner: Tirsan
 // All exports from sub-modules are registered here
 
-export { validateEduEmail } from './auth/validateEduEmail'
+// validateEduEmail disabled — requires Identity Platform (GCIP)
+// Client-side domain validation + OTP covers this sufficiently
 export { onUserCreated } from './auth/onUserCreated'
 export { sendOtp } from './auth/sendOtp'
 export { verifyOtp } from './auth/verifyOtp'
