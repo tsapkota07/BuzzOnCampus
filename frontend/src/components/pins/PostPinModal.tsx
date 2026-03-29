@@ -22,7 +22,7 @@ const inputStyle: React.CSSProperties = {
   background: 'rgba(255,255,255,0.07)',
   color: 'white',
   fontSize: 13,
-  fontFamily: 'Manrope, sans-serif',
+  fontFamily: 'Inter, system-ui, sans-serif',
 }
 
 export default function PostPinModal({ isOpen, onClose }: PostPinModalProps) {
@@ -178,7 +178,7 @@ export default function PostPinModal({ isOpen, onClose }: PostPinModalProps) {
                   border: 'none',
                   fontSize: 13,
                   fontWeight: 700,
-                  fontFamily: 'Manrope, sans-serif',
+                  fontFamily: 'Inter, system-ui, sans-serif',
                   cursor: selectedType ? 'pointer' : 'not-allowed',
                   background: selectedType
                     ? 'linear-gradient(135deg, #fd8b00, #8c4a00)'
@@ -286,7 +286,7 @@ export default function PostPinModal({ isOpen, onClose }: PostPinModalProps) {
                   border: 'none',
                   fontSize: 13,
                   fontWeight: 700,
-                  fontFamily: 'Manrope, sans-serif',
+                  fontFamily: 'Inter, system-ui, sans-serif',
                   cursor: title.trim() ? 'pointer' : 'not-allowed',
                   background: title.trim()
                     ? 'linear-gradient(135deg, #fd8b00, #8c4a00)'

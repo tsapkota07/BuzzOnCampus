@@ -187,16 +187,16 @@ export default function LandingPage() {
       style={{
         backgroundColor: theme.bg,
         color: theme.text,
-        fontFamily: "'Manrope', sans-serif",
+        fontFamily: "'Inter', sans-serif",
         transition: 'background-color 0.6s ease, color 0.6s ease',
       }}
     >
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; font-family: 'Material Symbols Outlined'; }
         .glass-panel { background: rgba(255,255,255,0.85); backdrop-filter: blur(24px); }
-        select, input { font-family: 'Manrope', sans-serif; }
+        select, input { font-family: 'Inter', sans-serif; }
       `}</style>
 
       {/* LEFT PANEL */}

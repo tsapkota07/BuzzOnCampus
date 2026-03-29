@@ -8,12 +8,12 @@ export default function NotFoundPage() {
       className="flex h-screen w-full items-center justify-center flex-col gap-6"
       style={{
         backgroundColor: '#fff5ed',
-        fontFamily: "'Manrope', sans-serif",
+        fontFamily: "'Inter', sans-serif",
         color: '#452800',
       }}
     >
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; font-family: 'Material Symbols Outlined'; }
       `}</style>
